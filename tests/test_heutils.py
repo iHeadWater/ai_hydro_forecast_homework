@@ -1,5 +1,5 @@
 import pandas as pd
-from hydroevaluate.utils.heutils import calculate_nse, gee_gpm_to_1h_data
+from hydroevaluate.utils.heutils import calculate_nse, gee_gpm_to_1h_data, plot_time_series
 import os
 from loguru import logger
 
@@ -27,8 +27,8 @@ def test_gee_single_basin_gpm_to_1h_data(tmp_path = 'data/gee_gpm'):
     assert result["time"].dtype == "datetime64[ns]"
     
 def test_nse_cal(
-    observed_csv = os.path.join('data','gee_gpm_1h' "observed.csv"),
-    simulated_csv = os.path.join('data', 'postgres_gpm' "simulated.csv"),
+    observed_csv = os.path.join('data','gee_gpm_1h',"observed.csv"),
+    simulated_csv = os.path.join('data', 'postgres_gpm',"simulated.csv"),
     column_name = 'tp'
     ):
 
@@ -52,3 +52,13 @@ def test_nse_cal(
     # Perform assertion to validate the result
     assert isinstance(nse, float)
     print(nse)
+
+def test_nse_with_local_csv():
+    observed_csv = 'data/gee_gpm_1h/21110400.csv'
+    simulated_csv = 'data/gee_gfs_1h/21110400.csv'
+    column_name = 'tp'
+    nse = calculate_nse(observed_csv, simulated_csv, column_name)
+    print(nse)
+    
+def test_plot_with_local_csv():
+    plot_time_series('data/gee_gpm_3h/21110400.csv', 'data/station_tp/21110400.csv', 'tp')
