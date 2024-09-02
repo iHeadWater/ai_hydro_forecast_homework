@@ -8,36 +8,55 @@ FilePath: \\hydroevaluate\\hydroevaluate\\utils\\heutils.py
 Copyright (c) 2023-2024 Wenyu Ouyang. All rights reserved.
 """
 
+from matplotlib import pyplot as plt
 import urllib3 as ur
 from yaml import Loader, load
 
 import datetime
 import xarray as xr
+import pint
 
 import os.path
-
 import pandas as pd
-import matplotlib.pyplot as plt
-import logging
 
-logging.getLogger().setLevel(logging.WARNING)
+ureg = pint.UnitRegistry()
+ureg.setup_matplotlib()
 
-# def read_yaml(version):
-#     config_path = os.path.join(
-#         work_dir, "test_data/aiff_config/aiff_v" + str(version) + ".yml"
-#     )
-#     if not os.path.exists(config_path):
-#         version_url = (
-#             "https://raw.githubusercontent.com/iHeadWater/AIFloodForecast/main/scripts/conf/v"
-#             + str(version)
-#             + ".yml"
-#         )
-#         yml_str = ur.request("GET", version_url).data.decode("utf8")
-#     else:
-#         with open(config_path, "r") as fp:
-#             yml_str = fp.read()
-#     conf_yaml = load(yml_str, Loader=Loader)
-#     return conf_yaml
+def convert_units(data, units, area=None):
+    for col, (from_unit, to_unit) in units.items():
+        if col in data.columns:
+            # TODO: for 3h data, we need a more general way to convert units
+            if from_unit == "mm/h" and to_unit == "mm/3h":
+                data[col] = data[col] * 3
+            elif from_unit == "m/h" and to_unit == "mm/3h":
+                data[col] = data[col] * 1000 * 3
+            # TODO: for streamflow, 3h data is not supported yet
+            elif from_unit in ["m^3/s", "ft^3/s"] and to_unit == "mm/h":
+                if area is None:
+                    raise ValueError("Area is required to convert flow to depth.")
+                if from_unit == "ft^3/s":
+                    # turn to m^3/s
+                    # data[col] = data[col] * 0.0283168
+                    quantity = data[col].values * ureg(from_unit)
+                    data[col] = quantity.to("m^3/s").magnitude
+                # Change the unit of streamflow data from m^3/s to mm/h.
+                data[col] = (data[col] / area) * 3.6
+            else:
+                quantity = data[col].values * ureg(from_unit)
+                data[col] = quantity.to(to_unit).magnitude
+    return data
+
+def read_yaml(version):
+    config_path = os.path.join(
+        work_dir, f'test_data/aiff_config/aiff_v{str(version)}.yml'
+    )
+    if not os.path.exists(config_path):
+        version_url = f'https://raw.githubusercontent.com/iHeadWater/AIFloodForecast/main/scripts/conf/v{str(version)}.yml'
+        yml_str = ur.request('GET', version_url).data.decode('utf8')
+    else:
+        with open(config_path, 'r') as fp:
+            yml_str = fp.read()
+    return load(yml_str, Loader=Loader)
 
 
 def convert_baseDatetime_iso(record, key):
@@ -53,14 +72,20 @@ def to_dataarray(df, dims, coords, name):
 
 def gee_gpm_to_1h_data(csv_path):
     """
-    Args:
-        csv_path (_type_): gee_gpm_csv, do not generate the shape column in the csv
+    Convert GEE GPM half-hour data to 1h data
 
-    Returns:
-        final_data : gpm 1h mean data, csv type
+    Parameters
+    ----------
+    csv_path : _type_
+        _description_
+
+    Returns
+    -------
+    pd.DataFrame
+        _description_
     """
     # Load the CSV file, ensuring BASIN_ID is read as a string
-    data = pd.read_csv(csv_path, dtype={"BASIN_ID": str})
+    data = pd.read_csv(csv_path)
 
     # Convert 'time_start' to datetime
     data["time_start"] = pd.to_datetime(data["time_start"])
@@ -68,77 +93,13 @@ def gee_gpm_to_1h_data(csv_path):
     # Set 'time_start' as index for resampling
     data.set_index("time_start", inplace=True)
 
-    # Extract the 'BASIN_ID' for the first row of each hour
-    basin_id = data["BASIN_ID"].resample("H").first()
-
-    # Select only the numeric columns for resampling
-    numeric_data = data[["precipitationCal"]]
-
     # Resample to hourly frequency, taking the mean for 'precipitationCal'
-    resampled_data = numeric_data.resample("H").mean()
-
-    # Combine the resampled data with the corresponding 'BASIN_ID'
-    resampled_data["BASIN_ID"] = basin_id.values
+    resampled_data = data.resample("H").mean()
 
     # Reset index to move 'time_start' back to a column
     resampled_data.reset_index(inplace=True)
 
-    # Select and rename columns as required
-    final_data = resampled_data[["BASIN_ID", "precipitationCal", "time_start"]]
-    final_data.columns = ["basin", "gpm_tp", "time"]
-
-    return final_data
-
-
-# Define the correct conversion function with accurate parsing
-def convert_index_to_correct_date(index):
-    base_date = pd.to_datetime(index[:8], format="%Y%m%d")
-    hour_increment = int(
-        index[11:14]
-    )  # Adjust the slicing to correctly extract hours after 'F'
-    return base_date + pd.Timedelta(hours=hour_increment)
-
-
-def gee_gfs_tp_data_process(csv_path):
-    df = pd.read_csv(csv_path)
-
-    # Select relevant columns
-    df = df[["basin_id", "system:index", "total_precipitation_surface"]]
-
-    # Apply the correct conversion function
-    df["time"] = df["system:index"].apply(
-        lambda x: pd.to_datetime(x[:10], format="%Y%m%d%H")
-        + pd.Timedelta(hours=int(x[11:14]))
-    )
-
-    # Drop the original 'system:index' column
-    df = df.drop(columns=["system:index"])
-
-    df = df.rename(
-        columns={"basin_id": "basin", "total_precipitation_surface": "gfs_tp_origin"}
-    )
-    # 排序数据，以确保时间顺序正确
-    df = df.sort_values(by="time").reset_index(drop=True)
-
-    # Extracting the 'gfs_tp' column
-    gfs_tp = df["gfs_tp_origin"].values
-
-    # Processing the 'gfs_tp' column as per the given instructions
-    processed_gfs_tp = []
-    for i in range(len(gfs_tp)):
-        if i % 6 == 0:
-            # First hour of each 6-hour block
-            processed_gfs_tp.append(gfs_tp[i])
-        else:
-            # Subsequent hours of each 6-hour block
-            processed_gfs_tp.append(gfs_tp[i] - gfs_tp[i - 1])
-
-    # Adding the processed 'gfs_tp' column back to the dataframe
-    df["gfs_tp"] = processed_gfs_tp
-    df = df.drop(columns=["gfs_tp_origin"])
-    # Display the dataframe to the user
-    return df
-
+    return resampled_data
 
 def calculate_nse(observed_csv_path, simulated_csv_path, column_name):
     """
@@ -168,16 +129,20 @@ def calculate_nse(observed_csv_path, simulated_csv_path, column_name):
     simulated_df = pd.read_csv(simulated_csv_path)
 
     # check if both CSV files contain a 'time' column
-    if "time" not in observed_df.columns or "time" not in simulated_df.columns:
-        raise ValueError("Both CSV files must contain a 'time' column")
+    if "time" in observed_df.columns and "time" in simulated_df.columns:
+        time_column = "time"
+    elif "time_start" in observed_df.columns and "time_start" in simulated_df.columns:
+        time_column = "time_start"
+    else:
+        raise ValueError("Both CSV files must contain a 'time' or 'time_start' column")
 
     # convert 'time' column to datetime
-    observed_df["time"] = pd.to_datetime(observed_df["time"])
-    simulated_df["time"] = pd.to_datetime(simulated_df["time"])
+    observed_df[time_column] = pd.to_datetime(observed_df[time_column])
+    simulated_df[time_column] = pd.to_datetime(simulated_df[time_column])
 
     # merge the two CSV files on the 'time' column
     merged_df = pd.merge(
-        observed_df, simulated_df, on="time", suffixes=("_obs", "_sim")
+        observed_df, simulated_df, on=time_column, suffixes=("_obs", "_sim")
     )
 
     # calculate NSE
@@ -186,9 +151,7 @@ def calculate_nse(observed_csv_path, simulated_csv_path, column_name):
     observed_mean = observed.mean()
     numerator = ((observed - simulated) ** 2).sum()
     denominator = ((observed - observed_mean) ** 2).sum()
-    nse = 1 - (numerator / denominator)
-
-    return nse
+    return 1 - (numerator / denominator) # NSE
 
 
 def plot_time_series(observed_csv, simulated_csv, column_name):
@@ -209,29 +172,31 @@ def plot_time_series(observed_csv, simulated_csv, column_name):
     ValueError
         If either CSV file does not contain a 'time' column
     """
-    # 读取CSV文件
+    # read csv file
     observed_df = pd.read_csv(observed_csv)
     simulated_df = pd.read_csv(simulated_csv)
 
-    # 确保 time 列存在
-    if "time" not in observed_df.columns or "time" not in simulated_df.columns:
-        raise ValueError("Both CSV files must contain a 'time' column")
+    # check if both CSV files contain a 'time' column
+    if "time" in observed_df.columns and "time" in simulated_df.columns:
+        time_column = "time"
+    elif "time_start" in observed_df.columns and "time_start" in simulated_df.columns:
+        time_column = "time_start"
+    else:
+        raise ValueError("Both CSV files must contain a 'time' or 'time_start' column")
 
-    # 将 time 列转换为 datetime 类型以确保正确的合并
-    observed_df["time"] = pd.to_datetime(observed_df["time"])
-    simulated_df["time"] = pd.to_datetime(simulated_df["time"])
+    # convert 'time' column to datetime
+    observed_df[time_column] = pd.to_datetime(observed_df[time_column])
+    simulated_df[time_column] = pd.to_datetime(simulated_df[time_column])
 
-    # 取 time 维度的交集
+    # merge the two CSV files on the 'time' column
     merged_df = pd.merge(
-        observed_df, simulated_df, on="time", suffixes=("_obs", "_sim")
+        observed_df, simulated_df, on=time_column, suffixes=("_obs", "_sim")
     )
 
-    # 提取交集后的时间和指定列的数据
-    time = merged_df["time"]
+    time = merged_df[time_column]
     observed = merged_df[f"{column_name}_obs"]
     simulated = merged_df[f"{column_name}_sim"]
 
-    # 绘图
     plt.figure(figsize=(10, 6))
     plt.plot(time, observed, label="Observed", color="blue")
     plt.plot(time, simulated, label="Simulated", color="red", linestyle="--")

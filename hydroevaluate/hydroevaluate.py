@@ -25,7 +25,7 @@ from torchhydro.trainers.train_utils import (
 )
 
 from hydroevaluate import SETTING
-from hydroevaluate.dataloader.data import load_dataset
+from hydroevaluate.dataloader.dataloader import load_dataset
 from hydroevaluate.modelloader.model import infer_torchmodel, load_torchmodel
 
 

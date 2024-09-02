@@ -1,14 +1,12 @@
+'''
+Author: silencesoup silencesoup@outlook.com
+Date: 2024-08-22 14:55:56
+LastEditors: silencesoup silencesoup@outlook.com
+LastEditTime: 2024-08-29 09:57:50
+FilePath: /hydroevaluate/hydroevaluate/dataloader/data_loader.py
+Description: 
+'''
 # -*- coding: utf-8 -*-
-"""
-Author: Wenyu Ouyang
-Date: 2023-10-29 17:35:04
-LastEditTime: 2024-06-03 15:21:41
-LastEditors: Wenyu Ouyang
-Description: Load data for evaluation
-FilePath: \hydroevaluate\hydroevaluate\dataloader\data.py
-Copyright (c) 2023-2024 Wenyu Ouyang. All rights reserved.
-"""
-from hydroevaluate.dataloader.common import MultiSource
 
 
 class EvalDataset:
@@ -25,18 +23,15 @@ class EvalDataset:
         self.x, self.c = self._kill_nan(norm_x, norm_c)
 
     def _read_xc(self):
-        multi_soucre = MultiSource(self.data_cfgs)
-        # Scaler to norm the data, copy the function from torchhydro if needed
         pass
 
     def _kill_nan():
-        # call from torchhydro
         pass
 
     def _normalize():
         pass
 
-    def denormalize(norm_pred):
+    def denormalize(self):
         pass
 
 
@@ -55,4 +50,4 @@ def load_dataset(data_cfgs):
     _type_
         _description_
     """
-    return EvalDataset(data_cfgs)
+    return EvalDataset(**data_cfgs)

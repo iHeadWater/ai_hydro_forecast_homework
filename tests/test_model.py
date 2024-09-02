@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torchhydro.models.cudnnlstm import CpuLstmModel
+from torchhydro.models.seq2seq import GeneralSeq2Seq
 from hydroevaluate.modelloader.model import load_hydromodel, load_torchmodel
 
 
@@ -54,6 +55,33 @@ def test_load_torchmodel(tmp_path):
     }
     pth_path = os.path.join(tmp_path, "model_tmp.pth")
     model_ = CpuLstmModel(**model_hyperparam)
+    # Save the model state_dict instead of using a non-existent save method
+    torch.save(model_.state_dict(), pth_path)
+    # Call the load_torchmodel function
+    model = load_torchmodel(model_name, model_hyperparam, pth_path)
+
+    # Perform assertions to validate the result
+    assert isinstance(model, torch.nn.Module)
+    # Add more assertions as needed to validate the result
+    # sourcery skip: no-loop-in-tests
+    for param_tensor in model_.state_dict():
+        assert torch.equal(
+            model_.state_dict()[param_tensor], model.state_dict()[param_tensor]
+        )
+
+def test_load_s2s(tmp_path):
+    model_name = "Seq2Seq"
+    model_hyperparam={
+            "en_input_size": 17,
+            "de_input_size": 18,
+            "output_size": 2,
+            "hidden_size": 256,
+            "forecast_length": 56,
+            "prec_window": 1,
+            "teacher_forcing_ratio": 0.5,
+    }
+    pth_path = '/home/xushuolong1/hydro/hydroevaluate/data/best_model.pth'
+    model_ = GeneralSeq2Seq(**model_hyperparam)
     # Save the model state_dict instead of using a non-existent save method
     torch.save(model_.state_dict(), pth_path)
     # Call the load_torchmodel function

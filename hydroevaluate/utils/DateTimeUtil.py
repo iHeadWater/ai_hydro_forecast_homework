@@ -208,8 +208,11 @@ def get_month_range(year, month):
     # 1号是周几，和一个月有多少天
     weekday, month_range = calendar.monthrange(year, month)
 
-    str_month = "0" + str(month) if len(str(month)) == 1 else str(month)
-    return str(year) + "-" + str_month + "-01", str(year) + "-" + str_month + '-' + str(month_range)
+    str_month = f"0{str(month)}" if len(str(month)) == 1 else str(month)
+    return (
+        f"{str(year)}-{str_month}-01",
+        f"{str(year)}-{str_month}-{str(month_range)}",
+    )
 
 
 def next_day(start_date):
@@ -250,8 +253,7 @@ def time_stamp_to_date(ts):
     ts = int(ts) / 1000
     # 转换为其他日期格式,如:"%Y-%m-%d %H:%M:%S"
     timeArray = time.localtime(ts)
-    otherStyleTime = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
-    return otherStyleTime
+    return time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
 
 
 def month_add(inteval: int):
