@@ -22,28 +22,34 @@ import pandas as pd
 ureg = pint.UnitRegistry()
 ureg.setup_matplotlib()
 
+import xarray as xr
+
 def convert_units(data, units, area=None):
-    for col, (from_unit, to_unit) in units.items():
-        if col in data.columns:
-            # TODO: for 3h data, we need a more general way to convert units
+    for var_name, (from_unit, to_unit) in units.items():
+        if var_name in data:
+            # Retrieve the variable from the dataset
+            var_data = data[var_name]
+            
+            # Unit conversion logic
             if from_unit == "mm/h" and to_unit == "mm/3h":
-                data[col] = data[col] * 3
+                data[var_name] = var_data * 3
             elif from_unit == "m/h" and to_unit == "mm/3h":
-                data[col] = data[col] * 1000 * 3
-            # TODO: for streamflow, 3h data is not supported yet
+                data[var_name] = var_data * 1000 * 3
             elif from_unit in ["m^3/s", "ft^3/s"] and to_unit == "mm/h":
                 if area is None:
                     raise ValueError("Area is required to convert flow to depth.")
                 if from_unit == "ft^3/s":
-                    # turn to m^3/s
-                    # data[col] = data[col] * 0.0283168
-                    quantity = data[col].values * ureg(from_unit)
-                    data[col] = quantity.to("m^3/s").magnitude
-                # Change the unit of streamflow data from m^3/s to mm/h.
-                data[col] = (data[col] / area) * 3.6
+                    # Use pint to convert from ft^3/s to m^3/s
+                    quantity = var_data.values * ureg(from_unit)
+                    var_data_m3s = quantity.to("m^3/s").magnitude
+                    var_data = xr.DataArray(var_data_m3s, coords=var_data.coords, dims=var_data.dims)
+                # Convert flow from m^3/s to mm/h
+                data[var_name] = (var_data / area) * 3.6
             else:
-                quantity = data[col].values * ureg(from_unit)
-                data[col] = quantity.to(to_unit).magnitude
+                # Handle other unit conversions
+                quantity = var_data.values * ureg(from_unit)
+                converted_quantity = quantity.to(to_unit).magnitude
+                data[var_name] = xr.DataArray(converted_quantity, coords=var_data.coords, dims=var_data.dims)
     return data
 
 def read_yaml(version):

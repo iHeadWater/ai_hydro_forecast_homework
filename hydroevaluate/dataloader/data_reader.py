@@ -2,9 +2,9 @@
 Author: silencesoup silencesoup@outlook.com
 Date: 2024-08-29 09:49:24
 LastEditors: silencesoup silencesoup@outlook.com
-LastEditTime: 2024-08-29 18:42:36
+LastEditTime: 2024-09-03 09:49:27
 FilePath: /hydroevaluate/hydroevaluate/dataloader/data_reader.py
-Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+Description:
 '''
 
 import pandas as pd
@@ -12,11 +12,12 @@ import os
 import xarray as xr
 
 from hydroevaluate.utils.heutils import convert_units
+from hydrodatasource.reader.data_source import SelfMadeHydroDataset
 
 def read_selfmade_data(
     data_dir,
     basin_ids,
-    data_names=None,
+    vars=None,
     data_units=None,
     prefix=None,
     postfix=None,
@@ -42,9 +43,10 @@ def read_selfmade_data(
     """
     prefix = prefix + '_' if prefix is not None else ''
     postfix = '_' + postfix if postfix is not None else ''
-    nc_data_path = os.path.join(data_dir, f'{prefix}{basin_id}{postfix}.nc')
-    if os.path.exists(nc_data_path):
+    if data_dir.endswith('.nc'):
+        nc_data_path = data_dir
         xr_dataset = xr.open_dataset(nc_data_path)
+        xr_dataset = xr_dataset.sel(basin=basin_ids)
     else:
         all_dataarrays = []
         for basin_id in basin_ids:
@@ -61,8 +63,24 @@ def read_selfmade_data(
             xr_dataarray = df_data.to_xarray()
             all_dataarrays.append(xr_dataarray)
         xr_dataset = xr.concat(all_dataarrays, dim='basin_id')
-            
+    
+    if vars is not None:
+        if vars not in xr_dataset.data_vars:
+            raise ValueError("Variable not supported")
+        xr_dataset = xr_dataset[vars]
     # Column renaming and unit conversion
     if data_units is not None:
         xr_dataset = convert_units(xr_dataset, data_units)
+
     return xr_dataset
+
+def read_training_data(data_dir, basin_ids, vars, time_range = None, time_unit=None):
+    if time_unit is None:
+        time_unit = ['1D']
+    dataset = SelfMadeHydroDataset(data_path=data_dir, time_unit=time_unit)
+    return dataset.read_ts_xrdataset(
+        gage_id_lst=basin_ids,
+        t_range=time_range,
+        var_lst=vars,
+        time_units=time_unit,
+    )[time_unit[0]]
