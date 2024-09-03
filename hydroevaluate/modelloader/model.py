@@ -21,34 +21,22 @@ from torchhydro.models.model_dict_function import pytorch_model_dict
 ALL_MODELS_DICT = {**MODEL_DICT, **pytorch_model_dict}
 
 
-def load_hydromodel(
-    p_and_e: np.ndarray,
-    area,
-    calibrated_norm_param_file,
-    param_range_file,
-    model_info_file: str = None,
-    target_unit="m^3/s",
-):
-    """Directly load the calibrated model with the given parameters
-    one-time call for only one basin now
-
-    Parameters
-    ----------
-    p_and_e : _type_
-        _description_
-    area:
-        _description_
-    calibrated_norm_param_file : str
-        calibrated norm parameters file
-    param_range_file : _type_
-        _description_
-    model_info_file : _type_
-        _description_
-    Returns
-    -------
-    _type_
-        _description_
+def load_hydromodel(config):
     """
+    Directly load the calibrated model with the given parameters
+    one-time call for only one basin now
+    """
+    p_and_e = config["model_config"]["p_and_e"]
+    area = config["model_config"]["area"]
+    calibrated_norm_param_file = config["model_config"]["calibrated_norm_param_file"]
+    param_range_file = config["model_config"]["param_range_file"]
+    model_info_file = config["model_config"]["model_info_file"]
+    target_unit = config["model_config"]["target_unit"]
+    target_unit = "m^3/s" if target_unit is None else target_unit
+    if not (p_and_e and area and calibrated_norm_param_file and param_range_file):
+        raise ValueError(
+            "p_and_e, area, calibrated_norm_param_file, param_range_file should be provided"
+        )
     if model_info_file is None:
         model_info = {
             "name": "xaj",
@@ -59,6 +47,39 @@ def load_hydromodel(
     else:
         model_info = json.load(open(model_info_file, "r"))
     calibrated_norm_params = pd.read_csv(calibrated_norm_param_file, index_col=0).values
+    return (
+        p_and_e,
+        area,
+        calibrated_norm_params,
+        param_range_file,
+        model_info,
+        target_unit,
+    )
+
+
+def load_torchmodel(config):
+    model_name = config["model_config"]["model_name"]
+    model_hyperparam = config["model_config"]["model_hyperparam"]
+    pth_path = config["model_config"]["pth_path"]
+    if model_name not in pytorch_model_dict.keys():
+        raise ValueError(f"Unsupported model type: {model_name}")
+    model = pytorch_model_dict[model_name](**model_hyperparam)
+    model.load_state_dict(torch.load(pth_path))
+    return model
+
+
+def infer_hydromodel(**kwargs):
+    p_and_e = kwargs.get("p_and_e", None)
+    area = kwargs.get("area", None)
+    calibrated_norm_params = kwargs.get("calibrated_norm_params", None)
+    param_range_file = kwargs.get("param_range_file", None)
+    model_info = kwargs.get("model_info", None)
+    target_unit = kwargs.get("target_unit", None)
+    target_unit = "m^3/s" if target_unit is None else target_unit
+    if not (p_and_e and area and calibrated_norm_params and param_range_file):
+        raise ValueError(
+            "p_and_e, area, calibrated_norm_params, param_range_file should be provided"
+        )
     qsim, _ = MODEL_DICT[model_info["name"]](
         p_and_e,
         calibrated_norm_params,
@@ -74,15 +95,7 @@ def load_hydromodel(
     return streamflow_unit_conv(q_sim_with_unit, area_np_with_unit, target_unit, True)
 
 
-def load_torchmodel(model_name, model_hyperparam, pth_path):
-    if model_name not in pytorch_model_dict.keys():
-        raise ValueError(f"Unsupported model type: {model_name}")
-    model = pytorch_model_dict[model_name](**model_hyperparam)
-    model.load_state_dict(torch.load(pth_path))
-    return model
-
-
-def infer_torchmodel(seq_first, device, model, xs):
+def infer_torchmodel(**kwargs):
     """The main difference between this function and the original infer_model from torchhydro
     is: this is a real case and only input is available, but no observation is available.
 
@@ -102,6 +115,10 @@ def infer_torchmodel(seq_first, device, model, xs):
     _type_
         _description_
     """
+    seq_first = kwargs.get("seq_first", False)
+    device = kwargs.get("device", "cpu")
+    model = kwargs.get("model", model)
+    xs = kwargs.get("xs", xs)
     if type(xs) is list:
         xs = [
             (

@@ -58,7 +58,14 @@ def test_load_torchmodel(tmp_path):
     # Save the model state_dict instead of using a non-existent save method
     torch.save(model_.state_dict(), pth_path)
     # Call the load_torchmodel function
-    model = load_torchmodel(model_name, model_hyperparam, pth_path)
+    config = {
+        "model_config": {
+            "model_name": model_name,
+            "model_hyperparam": model_hyperparam,
+            "pth_path": pth_path,
+        }
+    }
+    model = load_torchmodel(config)
 
     # Perform assertions to validate the result
     assert isinstance(model, torch.nn.Module)
@@ -69,23 +76,31 @@ def test_load_torchmodel(tmp_path):
             model_.state_dict()[param_tensor], model.state_dict()[param_tensor]
         )
 
+
 def test_load_s2s(tmp_path):
     model_name = "Seq2Seq"
-    model_hyperparam={
-            "en_input_size": 17,
-            "de_input_size": 18,
-            "output_size": 2,
-            "hidden_size": 256,
-            "forecast_length": 56,
-            "prec_window": 1,
-            "teacher_forcing_ratio": 0.5,
+    model_hyperparam = {
+        "en_input_size": 17,
+        "de_input_size": 18,
+        "output_size": 2,
+        "hidden_size": 256,
+        "forecast_length": 56,
+        "prec_window": 1,
+        "teacher_forcing_ratio": 0.5,
     }
-    pth_path = '/home/xushuolong1/hydro/hydroevaluate/data/best_model.pth'
+    pth_path = "/home/xushuolong1/hydro/hydroevaluate/data/best_model.pth"
     model_ = GeneralSeq2Seq(**model_hyperparam)
     # Save the model state_dict instead of using a non-existent save method
     torch.save(model_.state_dict(), pth_path)
+    config = {
+        "model_config": {
+            "model_name": model_name,
+            "model_hyperparam": model_hyperparam,
+            "pth_path": pth_path,
+        }
+    }
     # Call the load_torchmodel function
-    model = load_torchmodel(model_name, model_hyperparam, pth_path)
+    model = load_torchmodel(config)
 
     # Perform assertions to validate the result
     assert isinstance(model, torch.nn.Module)

@@ -2,7 +2,7 @@
 Author: silencesoup silencesoup@outlook.com
 Date: 2024-08-29 09:49:24
 LastEditors: silencesoup silencesoup@outlook.com
-LastEditTime: 2024-09-03 09:49:27
+LastEditTime: 2024-09-03 15:23:59
 FilePath: /hydroevaluate/hydroevaluate/dataloader/data_reader.py
 Description:
 '''
