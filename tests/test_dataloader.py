@@ -18,6 +18,7 @@ def default_config():
     config = {
         "data_cfg": {
             "data_dir": "/ftproot/basins-interim",
+            "stat_file_path": "/home/xushuolong1/hydro/hydroevaluate/data/model/dapengscaler_stat.json",
             "basin_ids": ["songliao_21401550", "songliao_21401050"],
             "data_units": ["3h"],
             "var_lst": ["precipitationCal", "streamflow"],
@@ -42,7 +43,6 @@ def default_config():
         },
         "eval_cfg": {
             "seq_first": True,
-            "stat_file_path": "/home/xushuolong1/hydro/hydroevaluate/data/model/dapengscaler_stat.json",
         },
     }
     data_source = SelfMadeHydroDataset(config["data_cfg"]["data_dir"])
@@ -50,7 +50,6 @@ def default_config():
         relevant_vars=config["data_cfg"]["var_lst"],
         constant_vars=config["data_cfg"]["constant_vars"],
         data_cfg=config["data_cfg"],
-        eval_cfg=config["eval_cfg"],
         data_source=data_source,
     )
     return config, scaler

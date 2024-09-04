@@ -10,6 +10,7 @@ Description:
 DEFAULT_cfg = {
     "data_cfg": {
         "data_dir": "",
+        "stat_file_path": "",
         "basin_ids": [],
         "data_units": [],
         "var_lst": [],
@@ -26,6 +27,5 @@ DEFAULT_cfg = {
     },
     "evaluation_cfg": {
         "seq_first": True,
-        "stat_file_path": "",
     },
 }

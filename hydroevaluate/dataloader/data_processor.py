@@ -32,7 +32,6 @@ class DapengScalerForEval(object):
         relevant_vars: np.array,
         constant_vars: np.array,
         data_cfg: dict,
-        eval_cfg: dict,
         other_vars: dict = None,
         prcp_norm_cols=None,
         gamma_norm_cols=None,
@@ -76,7 +75,6 @@ class DapengScalerForEval(object):
         self.data_forcing = relevant_vars
         self.data_attr = constant_vars
         self.data_cfg = data_cfg
-        self.eval_cfg = eval_cfg
         self.t_s_dict = wrap_t_s_dict(data_cfg)
         self.data_other = other_vars
         self.prcp_norm_cols = prcp_norm_cols
@@ -86,7 +84,7 @@ class DapengScalerForEval(object):
         self.pbm_norm = pbm_norm
         self.data_source = data_source
         # save stat_dict of training period in test_path for valid/test
-        stat_file = eval_cfg["stat_file_path"]
+        stat_file = data_cfg["stat_file_path"]
         assert os.path.isfile(stat_file)
         with open(stat_file, "r") as fp:
             self.stat_dict = json.load(fp)
