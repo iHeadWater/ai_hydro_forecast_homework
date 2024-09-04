@@ -29,12 +29,15 @@ def test_load_hydromodel():
     area = 2055.56  # Example area value
 
     # Call the load_hydromodel function
-    result = load_hydromodel(
-        p_and_e,
-        area,
-        calibrated_norm_param_file,
-        param_range_file,
-    )
+    config = {
+        "model_config": {
+            "p_and_e": p_and_e,
+            "area": area,
+            "calibrated_norm_param_file": calibrated_norm_param_file,
+            "param_range_file": param_range_file,
+        }
+    }
+    result = load_hydromodel(config)
     flattened_array = result.flatten()
     df = pd.DataFrame(flattened_array, columns=["qsim"])
     file_path = os.path.join(tmpdir, "simq.csv")
