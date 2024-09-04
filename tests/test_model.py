@@ -29,15 +29,15 @@ def test_load_hydromodel():
     area = 2055.56  # Example area value
 
     # Call the load_hydromodel function
-    config = {
-        "model_config": {
+    cfg = {
+        "model_cfg": {
             "p_and_e": p_and_e,
             "area": area,
             "calibrated_norm_param_file": calibrated_norm_param_file,
             "param_range_file": param_range_file,
         }
     }
-    result = load_hydromodel(config)
+    result = load_hydromodel(cfg)
     flattened_array = result.flatten()
     df = pd.DataFrame(flattened_array, columns=["qsim"])
     file_path = os.path.join(tmpdir, "simq.csv")
@@ -61,15 +61,15 @@ def test_load_torchmodel(tmp_path):
     # Save the model state_dict instead of using a non-existent save method
     torch.save(model_.state_dict(), pth_path)
     # Call the load_torchmodel function
-    config = {
-        "model_config": {
+    cfg = {
+        "model_cfg": {
             "model_name": model_name,
             "model_hyperparam": model_hyperparam,
             "pth_path": pth_path,
         }
     }
-    model_config = config["model_config"]
-    model = load_torchmodel(model_config)
+    model_cfg = cfg["model_cfg"]
+    model = load_torchmodel(model_cfg)
 
     # Perform assertions to validate the result
     assert isinstance(model, torch.nn.Module)
@@ -96,16 +96,16 @@ def test_load_s2s_local_pth():
     model_ = GeneralSeq2Seq(**model_hyperparam)
     # Save the model state_dict instead of using a non-existent save method
     torch.save(model_.state_dict(), pth_path)
-    config = {
-        "model_config": {
+    cfg = {
+        "model_cfg": {
             "model_name": model_name,
             "model_hyperparam": model_hyperparam,
             "pth_path": pth_path,
         }
     }
-    model_config = config["model_config"]
+    model_cfg = cfg["model_cfg"]
     # Call the load_torchmodel function
-    model = load_torchmodel(model_config)
+    model = load_torchmodel(model_cfg)
 
     # Perform assertions to validate the result
     assert isinstance(model, torch.nn.Module)

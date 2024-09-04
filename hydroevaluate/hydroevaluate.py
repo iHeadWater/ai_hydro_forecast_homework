@@ -9,6 +9,7 @@ Copyright (c) 2023-2024 Wenyu Ouyang. All rights reserved.
 """
 
 # pytest model_stream.py::test_auto_stream
+from abc import ABC, abstractmethod
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -25,63 +26,78 @@ from torchhydro.trainers.train_utils import (
 )
 
 from hydroevaluate import SETTING
-from hydroevaluate.dataloader.dataloader import load_dataset
-from hydroevaluate.modelloader.model import infer_torchmodel, load_torchmodel
+from hydroevaluate.dataloader.dataloader import DataLoader
+from hydroevaluate.modelloader.model_loader import ModelLoader
 
 
-class EvalDeepHydro:
+class HydroEvaluate(ABC):
     def __init__(self, conf_file=None):
         self.conf_dir = SETTING["conf_dir"]
         self.conf_name = conf_file
-        self.cfg = self._load_config()
-        self._check_config()
+        self.cfg = self._load_cfg()
+        self._check_cfg()
 
-    def _load_config(self):
-        config_name = self.conf_name
-        if config_name is None:
-            # TODO: we chose the first as the default, later we will handle with multiple config files
-            config_name = os.listdir(self.conf_dir)[0]
-        with open(os.path.join(self.conf_dir, config_name), "r") as fp:
+    def _load_cfg(self):
+        cfg_name = self.conf_name
+        if cfg_name is None:
+            # TODO: we chose the first as the default, later we will handle with multiple cfg files
+            cfg_name = os.listdir(self.conf_dir)[0]
+        with open(os.path.join(self.conf_dir, cfg_name), "r") as fp:
             cfg = yaml.load(fp, Loader)
         return cfg
 
-    def _check_config(self):
+    def _check_cfg(self):
         # TODO: simply check now, more detailed check will be added later
-        if "data_configs" not in self.cfg:
-            raise KeyError("data_configs not found in config file")
-        if "model_configs" not in self.cfg:
-            raise KeyError("model_configs not found in config file")
-        if "evaluation_configs" not in self.cfg:
-            raise KeyError("evaluation_configs not found in config file")
+        if "data_cfg" not in self.cfg:
+            raise KeyError("data_cfg not found in cfg file")
+        if "model_cfg" not in self.cfg:
+            raise KeyError("model_cfg not found in cfg file")
+        if "evaluation_cfg" not in self.cfg:
+            raise KeyError("evaluation_cfg not found in cfg file")
 
-    def load_model(self):
-        model_type = self.cfg["model_cfgs"]["model_name"]
-        model_hyperparam = self.cfg["model_cfgs"]["model_hyperparam"]
-        trained_param_dir = self.cfg["model_cfgs"]["param_dir"]
-        return load_torchmodel(model_type, model_hyperparam, trained_param_dir)
+    @abstractmethod
+    def _load_model(self):
+        pass
 
-    def load_data(self):
-        data_cfgs = self.cfg["data_cfgs"]
-        return load_dataset(data_cfgs)
+    @abstractmethod
+    def _load_data(self):
+        pass
 
-    def run_model(self):
-        eval_cfgs = self.cfg["evaluation_cfgs"]
-        dataset = self.load_data()
-        model = self.load_model()
-        # Assume load_model and evaluate are methods defined in this class
-        model.eval()
-        # here the batch is just an index of lookup table, so any batch size could be chosen
-        seq_first = eval_cfgs["which_first_tensor"] == "sequence"
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    @abstractmethod
+    def model_infer(self):
+        pass
+
+    @abstractmethod
+    def model_evaluate(self):
+        pass
+
+
+class EvalDeepHydro(HydroEvaluate):
+    def __init__(self, conf_file=None):
+        super().__init__(conf_file)
+        self.modelloader = ModelLoader(self.cfg["model_cfg"])
+        self.dataloader = DataLoader(self.cfg["data_cfg"])
+
+    def _load_model(self):
+        return self.modelloader.load_model()
+
+    def _load_data(self):
+        return self.dataloader.load_data()
+
+    def model_infer(self):
+        eval_cfg = self.cfg["evaluation_cfg"]
+        dataset = self._load_data()
+        model = self._load_model()
+        seq_first = eval_cfg["seq_first"]
         with torch.no_grad():
-            pred = infer_torchmodel(seq_first, device, model, dataset.x)
+            pred = self.modelloader.infer(seq_first, model, dataset)
             pred = pred.cpu().numpy()
         ngrid = dataset.ngrid
-        if not eval_cfgs["long_seq_pred"]:
-            target_len = len(eval_cfgs["output_vars"])
-            prec_window = eval_cfgs["prec_window"]
-            if eval_cfgs["rolling"]:
-                forecast_length = eval_cfgs["forecast_length"]
+        if not eval_cfg["long_seq_pred"]:
+            target_len = len(eval_cfg["output_vars"])
+            prec_window = eval_cfg["prec_window"]
+            if eval_cfg["rolling"]:
+                forecast_length = eval_cfg["forecast_length"]
                 pred = pred[:, prec_window:, :].reshape(
                     ngrid, batch_size, forecast_length, target_len
                 )
@@ -93,18 +109,18 @@ class EvalDeepHydro:
                 pred = pred[:, prec_window, :].reshape(ngrid, batch_size, target_len)
         return dataset.denormalize(pred)
 
-    def evaluate(self, obs_xr):
-        eval_cfgs = self.cfg["evaluation_cfgs"]
+    def model_evaluate(self, obs_xr):
+        eval_cfg = self.cfg["evaluation_cfg"]
         pred_xr = self.run_model()
-        fill_nan = eval_cfgs["fill_nan"]
+        fill_nan = eval_cfg["fill_nan"]
         eval_log = {}
-        for i, col in enumerate(eval_cfgs["output_vars"]):
+        for i, col in enumerate(eval_cfg["output_vars"]):
             obs = obs_xr[col].to_numpy()
             pred = pred_xr[col].to_numpy()
             eval_log = calculate_and_record_metrics(
                 obs,
                 pred,
-                eval_cfgs["metrics"],
+                eval_cfg["metrics"],
                 col,
                 fill_nan[i] if isinstance(fill_nan, list) else fill_nan,
                 eval_log,

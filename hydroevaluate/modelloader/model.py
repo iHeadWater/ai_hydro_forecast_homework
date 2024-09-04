@@ -21,17 +21,17 @@ from torchhydro.models.model_dict_function import pytorch_model_dict
 ALL_MODELS_DICT = {**MODEL_DICT, **pytorch_model_dict}
 
 
-def load_hydromodel(config):
+def load_hydromodel(cfg):
     """
     Directly load the calibrated model with the given parameters
     one-time call for only one basin now
     """
-    p_and_e = config["model_config"]["p_and_e"]
-    area = config["model_config"]["area"]
-    calibrated_norm_param_file = config["model_config"]["calibrated_norm_param_file"]
-    param_range_file = config["model_config"]["param_range_file"]
-    model_info_file = config["model_config"]["model_info_file"]
-    target_unit = config["model_config"]["target_unit"]
+    p_and_e = cfg["model_cfg"]["p_and_e"]
+    area = cfg["model_cfg"]["area"]
+    calibrated_norm_param_file = cfg["model_cfg"]["calibrated_norm_param_file"]
+    param_range_file = cfg["model_cfg"]["param_range_file"]
+    model_info_file = cfg["model_cfg"]["model_info_file"]
+    target_unit = cfg["model_cfg"]["target_unit"]
     target_unit = "m^3/s" if target_unit is None else target_unit
     if not (p_and_e and area and calibrated_norm_param_file and param_range_file):
         raise ValueError(
@@ -57,10 +57,10 @@ def load_hydromodel(config):
     )
 
 
-def load_torchmodel(model_config):
-    model_name = model_config["model_name"]
-    model_hyperparam = model_config["model_hyperparam"]
-    pth_path = model_config["pth_path"]
+def load_torchmodel(model_cfg):
+    model_name = model_cfg["model_name"]
+    model_hyperparam = model_cfg["model_hyperparam"]
+    pth_path = model_cfg["pth_path"]
     if model_name not in pytorch_model_dict.keys():
         raise ValueError(f"Unsupported model type: {model_name}")
     model = pytorch_model_dict[model_name](**model_hyperparam)
@@ -116,9 +116,10 @@ def infer_torchmodel(**kwargs):
         _description_
     """
     seq_first = kwargs.get("seq_first", False)
-    device = kwargs.get("device", "cpu")
     model = kwargs.get("model", model)
     xs = kwargs.get("xs", xs)
+    model.eval()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if type(xs) is list:
         xs = [
             (
@@ -143,21 +144,3 @@ def infer_torchmodel(**kwargs):
     if seq_first:
         output = output.transpose(0, 1)
     return output
-
-
-def _read_history_model(user_model_type, version, history_dict_path):
-    # TODO: maybe under case like same model different version will be used
-    result = {}
-    models = os.listdir(os.path.join(work_dir, "test_data/models"))
-    # 姑且假设model的名字为wasted_v1.pth，即用途_版本.pth
-    current_max = 0
-    for model_name in models:
-        if user_model_type in model_name:
-            model_ver = int(model_name.split(".")[0].split("v")[1])
-            if model_ver > current_max:
-                current_max = model_ver
-    model_file_name = f"{user_model_type}_v{str(version)}.pth"
-    if model_file_name in models:
-        result[user_model_type] = current_max
-        np.save(history_dict_path, result, allow_pickle=True)
-    return result
