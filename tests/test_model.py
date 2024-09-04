@@ -68,7 +68,8 @@ def test_load_torchmodel(tmp_path):
             "pth_path": pth_path,
         }
     }
-    model = load_torchmodel(config)
+    model_config = config["model_config"]
+    model = load_torchmodel(model_config)
 
     # Perform assertions to validate the result
     assert isinstance(model, torch.nn.Module)
@@ -80,7 +81,7 @@ def test_load_torchmodel(tmp_path):
         )
 
 
-def test_load_s2s(tmp_path):
+def test_load_s2s_local_pth():
     model_name = "Seq2Seq"
     model_hyperparam = {
         "en_input_size": 17,
@@ -102,8 +103,9 @@ def test_load_s2s(tmp_path):
             "pth_path": pth_path,
         }
     }
+    model_config = config["model_config"]
     # Call the load_torchmodel function
-    model = load_torchmodel(config)
+    model = load_torchmodel(model_config)
 
     # Perform assertions to validate the result
     assert isinstance(model, torch.nn.Module)

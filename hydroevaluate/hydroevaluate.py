@@ -47,12 +47,12 @@ class EvalDeepHydro:
 
     def _check_config(self):
         # TODO: simply check now, more detailed check will be added later
-        if "data_cfgs" not in self.cfg:
-            raise KeyError("data_cfgs not found in config file")
-        if "model_cfgs" not in self.cfg:
-            raise KeyError("model_cfgs not found in config file")
-        if "evaluation_cfgs" not in self.cfg:
-            raise KeyError("evaluation_cfgs not found in config file")
+        if "data_configs" not in self.cfg:
+            raise KeyError("data_configs not found in config file")
+        if "model_configs" not in self.cfg:
+            raise KeyError("model_configs not found in config file")
+        if "evaluation_configs" not in self.cfg:
+            raise KeyError("evaluation_configs not found in config file")
 
     def load_model(self):
         model_type = self.cfg["model_cfgs"]["model_name"]

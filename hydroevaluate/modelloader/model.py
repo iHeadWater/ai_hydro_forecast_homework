@@ -57,10 +57,10 @@ def load_hydromodel(config):
     )
 
 
-def load_torchmodel(config):
-    model_name = config["model_config"]["model_name"]
-    model_hyperparam = config["model_config"]["model_hyperparam"]
-    pth_path = config["model_config"]["pth_path"]
+def load_torchmodel(model_config):
+    model_name = model_config["model_name"]
+    model_hyperparam = model_config["model_hyperparam"]
+    pth_path = model_config["pth_path"]
     if model_name not in pytorch_model_dict.keys():
         raise ValueError(f"Unsupported model type: {model_name}")
     model = pytorch_model_dict[model_name](**model_hyperparam)
