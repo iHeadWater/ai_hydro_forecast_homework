@@ -12,14 +12,14 @@ import os
 import xarray as xr
 
 from hydroevaluate.utils.heutils import convert_units
-from hydrodatasource.reader.data_source import SelfMadeHydroDataset
+from hydroevaluate.dataloader.data_source import SelfMadeHydroDatasetForEval
 
 
 def read_selfmade_data(
     data_dir,
     basin_ids,
     var_lst=None,
-    data_units=None,
+    data_unit=None,
     prefix=None,
     postfix=None,
 ):
@@ -33,7 +33,7 @@ def read_selfmade_data(
         _description_
     basin_ids : _type_
         _description_
-    data_units : _type_, optional
+    data_unit : _type_, optional
         _description_, by default None
 
     Returns
@@ -68,8 +68,8 @@ def read_selfmade_data(
             raise ValueError("Variable not supported")
         xr_dataset = xr_dataset[var_lst]
     # Column renaming and unit conversion
-    if data_units is not None:
-        xr_dataset = convert_units(xr_dataset, data_units)
+    if data_unit is not None:
+        xr_dataset = convert_units(xr_dataset, data_unit)
 
     return xr_dataset
 
@@ -78,7 +78,7 @@ def read_selfmade_data(
 def read_training_data(data_dir, basin_ids, var_lst, time_range=None, time_unit=None):
     if time_unit is None:
         time_unit = ["1D"]
-    dataset = SelfMadeHydroDataset(data_path=data_dir, time_unit=time_unit)
+    dataset = SelfMadeHydroDatasetForEval(data_path=data_dir, time_unit=time_unit)
     return dataset.read_ts_xrdataset(
         gage_id_lst=basin_ids,
         t_range=time_range,

@@ -13,9 +13,9 @@ from hydroevaluate.hydroevaluate import EvalDeepHydro
 
 def test_load_config():
     eval_deep_hydro = EvalDeepHydro()
-    assert "data_cfgs" in eval_deep_hydro.cfg
-    assert "model_cfgs" in eval_deep_hydro.cfg
-    assert "evaluation_cfgs" in eval_deep_hydro.cfg
+    assert "data_cfg" in eval_deep_hydro.cfg
+    assert "model_cfg" in eval_deep_hydro.cfg
+    assert "evaluation_cfg" in eval_deep_hydro.cfg
 
 
 def test_load_data():

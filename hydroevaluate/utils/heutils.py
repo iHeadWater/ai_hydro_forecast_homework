@@ -126,14 +126,14 @@ def _prcp_norm(x: np.array, mean_prep: np.array, to_norm: bool) -> np.array:
     return x / tempprep if to_norm else x * tempprep
 
 
-def wrap_t_s_dict(data_cfgs: dict) -> OrderedDict:
+def wrap_t_s_dict(data_cfg: dict) -> OrderedDict:
     """
     Basins and periods
 
     Parameters
     ----------
 
-    data_cfgs
+    data_cfg
         configs for reading from data source
     is_tra_val_te
         train, valid or test
@@ -143,13 +143,11 @@ def wrap_t_s_dict(data_cfgs: dict) -> OrderedDict:
     OrderedDict
         OrderedDict(sites_id=basins_id, t_final_range=t_range_list)
     """
-    basins_id = data_cfgs["basin_ids"]
-    if "time_range" in data_cfgs:
-        t_range_list = data_cfgs["time_range"]
+    basins_id = data_cfg["basin_ids"]
+    if "time_range" in data_cfg:
+        t_range_list = data_cfg["time_range"]
     else:
-        raise ValueError(
-            f"Error! time_range is not specified in data_cfgs: {data_cfgs}"
-        )
+        raise ValueError(f"Error! time_range is not specified in data_cfg: {data_cfg}")
     return OrderedDict(sites_id=basins_id, t_final_range=t_range_list)
 
 

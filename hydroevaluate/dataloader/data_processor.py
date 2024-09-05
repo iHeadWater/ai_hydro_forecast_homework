@@ -153,7 +153,7 @@ class DapengScalerForEval(object):
             the dynamic inputs for modeling
         """
         stat_dict = self.stat_dict
-        var_lst = self.data_cfg["relevant_cols"]
+        var_lst = self.data_cfg["var_lst"]
         data = self.data_forcing
         data = _trans_norm(
             data, var_lst, stat_dict, log_norm_cols=self.log_norm_cols, to_norm=to_norm
@@ -177,7 +177,7 @@ class DapengScalerForEval(object):
             the static inputs for modeling
         """
         stat_dict = self.stat_dict
-        var_lst = self.data_cfg["constant_cols"]
+        var_lst = self.data_cfg["constant_vars"]
         data = self.data_attr
         data = _trans_norm(data, var_lst, stat_dict, to_norm=to_norm)
         return data

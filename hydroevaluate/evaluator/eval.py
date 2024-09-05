@@ -15,7 +15,7 @@ class Evaluator:
     def __init__(self, cfg):
         self.data_dir = cfg["data_dir"]
         self.basin_ids = cfg["basin_ids"]
-        self.data_units = cfg["data_units"]
+        self.data_unit = cfg["data_unit"]
         self.data_reader = cfg["data_reader"]
         self.model_type = cfg["model_type"]  # hydromodel or torchhydro
 
