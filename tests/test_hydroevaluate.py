@@ -9,15 +9,17 @@ Copyright (c) 2023-2024 Wenyu Ouyang. All rights reserved.
 """
 
 from hydroevaluate.hydroevaluate import EvalDeepHydro
+from hydroevaluate.configs.config import DEFAULT_cfgs
 
 
 def test_load_config():
     eval_deep_hydro = EvalDeepHydro()
-    assert "data_cfg" in eval_deep_hydro.cfg
-    assert "model_cfg" in eval_deep_hydro.cfg
-    assert "evaluation_cfg" in eval_deep_hydro.cfg
+    assert "data_cfgs" in eval_deep_hydro.cfgs
+    assert "model_cfgs" in eval_deep_hydro.cfgs
+    assert "evaluation_cfgs" in eval_deep_hydro.cfgs
 
 
-def test_load_data():
-    eval_deep_hydro = EvalDeepHydro()
-    eval_deep_hydro.load_data()
+def test_model_infer():
+    eval_deep_hydro = EvalDeepHydro(DEFAULT_cfgs)
+    pred = eval_deep_hydro.model_infer()
+    print(pred)

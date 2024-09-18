@@ -21,17 +21,17 @@ from torchhydro.models.model_dict_function import pytorch_model_dict
 ALL_MODELS_DICT = {**MODEL_DICT, **pytorch_model_dict}
 
 
-def load_hydromodel(cfg):
+def load_hydromodel(model_cfgs):
     """
     Directly load the calibrated model with the given parameters
     one-time call for only one basin now
     """
-    p_and_e = cfg["model_cfg"]["p_and_e"]
-    area = cfg["model_cfg"]["area"]
-    calibrated_norm_param_file = cfg["model_cfg"]["calibrated_norm_param_file"]
-    param_range_file = cfg["model_cfg"]["param_range_file"]
-    model_info_file = cfg["model_cfg"]["model_info_file"]
-    target_unit = cfg["model_cfg"]["target_unit"]
+    p_and_e = model_cfgs["p_and_e"]
+    area = model_cfgs["area"]
+    calibrated_norm_param_file = model_cfgs["calibrated_norm_param_file"]
+    param_range_file = model_cfgs["param_range_file"]
+    model_info_file = model_cfgs["model_info_file"]
+    target_unit = model_cfgs["target_unit"]
     target_unit = "m^3/s" if target_unit is None else target_unit
     if not (p_and_e and area and calibrated_norm_param_file and param_range_file):
         raise ValueError(
@@ -57,14 +57,16 @@ def load_hydromodel(cfg):
     )
 
 
-def load_torchmodel(model_cfg):
-    model_name = model_cfg["model_name"]
-    model_hyperparam = model_cfg["model_hyperparam"]
-    pth_path = model_cfg["pth_path"]
+def load_torchmodel(model_cfgs):
+    model_name = model_cfgs["model_name"]
+    model_hyperparam = model_cfgs["model_hyperparam"]
+    pth_path = model_cfgs["pth_path"]
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if model_name not in pytorch_model_dict.keys():
         raise ValueError(f"Unsupported model type: {model_name}")
     model = pytorch_model_dict[model_name](**model_hyperparam)
     model.load_state_dict(torch.load(pth_path))
+    model = model.to(device)
     return model
 
 
@@ -116,8 +118,10 @@ def infer_torchmodel(**kwargs):
         _description_
     """
     seq_first = kwargs.get("seq_first", False)
-    model = kwargs.get("model", model)
-    xs = kwargs.get("xs", xs)
+    model = kwargs.get("model", None)
+    xs = kwargs.get("xs", None)
+    if model is None or xs is None:
+        raise ValueError("model and xs should be provided")
     model.eval()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if type(xs) is list:

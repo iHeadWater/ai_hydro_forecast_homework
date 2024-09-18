@@ -3,7 +3,7 @@ Author: silencesoup silencesoup@outlook.com
 Date: 2024-09-03 10:16:32
 LastEditors: silencesoup silencesoup@outlook.com
 LastEditTime: 2024-09-04 11:01:45
-FilePath: /hydroevaluate/hydroevaluate/cfgs/cfg.py
+FilePath: /hydroevaluate/hydroevaluate/cfgss/cfgs.py
 Description:
 """
 
@@ -23,19 +23,20 @@ PET_DAYMET_NAME = "PET"
 PET_ERA5LAND_NAME = "potential_evaporation"
 DATE_FORMATS = ["%Y-%m-%d-%H", "%Y-%m-%d"]
 
-DEFAULT_cfg = {
-    "data_cfg": {
+DEFAULT_cfgs = {
+    "data_cfgs": {
         "data_dir": "/ftproot/basins-interim",
         "stat_file_path": "/home/xushuolong1/hydro/hydroevaluate/data/model/dapengscaler_stat.json",
-        "basin_ids": ["songliao_21401050", "songliao_21401550"],
-        "data_unit": ["3h"],
-        "interval": 3,
-        "time_range": [["2022-01-01-01", "2022-03-31-01"]],
+        "object_ids": ["songliao_21401050", "songliao_21401550"],
+        "min_time_unit": "h",
+        "min_time_interval": 3,
+        "t_range_test": [("2015-06-01-01", "2015-08-01-01")],
         "var_lst": ["total_precipitation_hourly", "sm_surface"],
         "output_vars": ["streamflow", "sm_surface"],
         "rho": 240,
         "horizon": 56,
         "warmup_length": 0,
+        "prec_window": 1,
         "constant_vars": [
             "area",  # 面积
             "ele_mt_smn",  # 海拔(空间平均)
@@ -93,8 +94,19 @@ DEFAULT_cfg = {
             "pbm_norm": False,
         },
     },
-    "model_cfg": {
-        "model_type": "hydromodel",
+    "model_cfgs": {
+        "model_type": "torchhydro",
+        "model_name": "Seq2Seq",
+        "model_hyperparam": {
+            "en_input_size": 17,
+            "de_input_size": 18,
+            "output_size": 2,
+            "hidden_size": 256,
+            "forecast_length": 56,
+            "prec_window": 1,
+            "teacher_forcing_ratio": 0.5,
+        },
+        "pth_path": "/home/xushuolong1/hydro/hydroevaluate/data/model/best_model.pth",
         "p_and_e": [],
         "area": 1000,
         "calibrated_norm_param_file": None,
@@ -102,9 +114,9 @@ DEFAULT_cfg = {
         "model_info_file": None,
         "target_unit": "m^3/s",
     },
-    "evaluation_cfg": {
-        "seq_first": True,
-        "rolling": True,
+    "evaluation_cfgs": {
+        "seq_first": False,
+        "rolling": False,
         "long_seq_pred": False,
     },
 }

@@ -11,16 +11,16 @@ from hydroevaluate.modelloader.model_dict import modelloader_dict, modelinfer_di
 
 
 class ModelLoader:
-    def __init__(self, model_cfg):
-        self.model_cfg = model_cfg
+    def __init__(self, model_cfgs):
+        self.model_cfgs = model_cfgs
 
     def load_model(self):
-        if self.model_cfg["model_type"] in modelloader_dict:
-            return modelloader_dict[self.model_cfg["model_type"]](self.model_cfg)
+        if self.model_cfgs["model_type"] in modelloader_dict:
+            return modelloader_dict[self.model_cfgs["model_type"]](self.model_cfgs)
         else:
             raise ValueError(
-                f'model type {self.model_cfg["model_type"]} is not supported'
+                f'model type {self.model_cfgs["model_type"]} is not supported'
             )
 
     def infer(self, **kwargs):
-        return modelinfer_dict[self.model_cfg["model_type"]](**kwargs)
+        return modelinfer_dict[self.model_cfgs["model_type"]](**kwargs)

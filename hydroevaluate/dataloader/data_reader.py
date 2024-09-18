@@ -12,14 +12,14 @@ import os
 import xarray as xr
 
 from hydroevaluate.utils.heutils import convert_units
-from hydroevaluate.dataloader.data_source import SelfMadeHydroDatasetForEval
+from hydrodatasource.reader.data_source import SelfMadeHydroDataset
 
 
 def read_selfmade_data(
     data_dir,
-    basin_ids,
+    object_ids,
     var_lst=None,
-    data_unit=None,
+    time_unit=None,
     prefix=None,
     postfix=None,
 ):
@@ -31,9 +31,9 @@ def read_selfmade_data(
     ----------
     data_dir : _type_
         _description_
-    basin_ids : _type_
+    object_ids : _type_
         _description_
-    data_unit : _type_, optional
+    time_unit : _type_, optional
         _description_, by default None
 
     Returns
@@ -45,10 +45,10 @@ def read_selfmade_data(
     if data_dir.endswith(".nc"):
         nc_data_path = data_dir
         xr_dataset = xr.open_dataset(nc_data_path)
-        xr_dataset = xr_dataset.sel(basin=basin_ids)
+        xr_dataset = xr_dataset.sel(basin=object_ids)
     else:
         all_dataarrays = []
-        for basin_id in basin_ids:
+        for basin_id in object_ids:
             csv_data_path = os.path.join(data_dir, f"{prefix}{basin_id}{postfix}.csv")
             txt_data_path = os.path.join(data_dir, f"{prefix}{basin_id}{postfix}.txt")
             if os.path.exists(csv_data_path):
@@ -68,20 +68,22 @@ def read_selfmade_data(
             raise ValueError("Variable not supported")
         xr_dataset = xr_dataset[var_lst]
     # Column renaming and unit conversion
-    if data_unit is not None:
-        xr_dataset = convert_units(xr_dataset, data_unit)
+    if time_unit is not None:
+        xr_dataset = convert_units(xr_dataset, time_unit)
 
     return xr_dataset
 
 
 # TODO: create a hydrodataset for eval or infer, we do not need all functions in SelfMadeHydroDataset, and it may cause error in FAPP
-def read_training_data(data_dir, basin_ids, var_lst, time_range=None, time_unit=None):
+def read_training_data(
+    data_dir, object_ids, var_lst, t_range_test=None, time_unit=None
+):
     if time_unit is None:
         time_unit = ["1D"]
-    dataset = SelfMadeHydroDatasetForEval(data_path=data_dir, time_unit=time_unit)
+    dataset = SelfMadeHydroDataset(data_path=data_dir, time_unit=time_unit)
     return dataset.read_ts_xrdataset(
-        gage_id_lst=basin_ids,
-        t_range=time_range,
+        gage_id_lst=object_ids,
+        t_range=t_range_test,
         var_lst=var_lst,
         time_units=time_unit,
     )[time_unit[0]]

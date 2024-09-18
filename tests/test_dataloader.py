@@ -10,7 +10,7 @@ Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查�
 import pytest
 from hydroevaluate.dataloader.data_reader import read_training_data
 from hydroevaluate.dataloader.data_processor import DapengScalerForEval
-from hydroevaluate.dataloader.data_sets import SelfMadeHydroDatasetForEval
+from hydrodatasource.reader.data_source import SelfMadeHydroDataset
 
 
 @pytest.fixture
@@ -19,10 +19,10 @@ def default_config():
         "data_cfg": {
             "data_dir": "/ftproot/basins-interim",
             "stat_file_path": "/home/xushuolong1/hydro/hydroevaluate/data/model/dapengscaler_stat.json",
-            "basin_ids": ["songliao_21401550", "songliao_21401050"],
+            "object_ids": ["songliao_21401550", "songliao_21401050"],
             "data_unit": ["3h"],
             "var_lst": ["precipitationCal", "streamflow"],
-            "time_range": ["2018-01-01", "2018-03-31"],
+            "t_range_test": ["2018-01-01", "2018-03-31"],
             "constant_vars": [
                 "area",
                 "ele_mt_smn",
@@ -45,7 +45,7 @@ def default_config():
             "seq_first": True,
         },
     }
-    data_source = SelfMadeHydroDatasetForEval(config["data_cfg"]["data_dir"])
+    data_source = SelfMadeHydroDataset(config["data_cfg"]["data_dir"])
     scaler = DapengScalerForEval(
         relevant_vars=config["data_cfg"]["var_lst"],
         constant_vars=config["data_cfg"]["constant_vars"],
@@ -59,9 +59,9 @@ def test_read_training_data():
     # Test with default parameters
     data = read_training_data(
         data_dir="/ftproot/basins-interim",
-        basin_ids=["songliao_21401050", "songliao_21401550"],
+        object_ids=["songliao_21401050", "songliao_21401550"],
         vars=["precipitationCal", "streamflow"],
-        time_range=("2022-01-01", "2022-01-31"),
+        t_range_test=("2022-01-01", "2022-01-31"),
         time_unit=["1D"],
     )
     print(data)

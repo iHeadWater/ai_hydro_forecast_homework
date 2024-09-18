@@ -143,11 +143,13 @@ def wrap_t_s_dict(data_cfg: dict) -> OrderedDict:
     OrderedDict
         OrderedDict(sites_id=basins_id, t_final_range=t_range_list)
     """
-    basins_id = data_cfg["basin_ids"]
-    if "time_range" in data_cfg:
-        t_range_list = data_cfg["time_range"]
+    basins_id = data_cfg["object_ids"]
+    if "t_range_test" in data_cfg:
+        t_range_list = data_cfg["t_range_test"]
     else:
-        raise ValueError(f"Error! time_range is not specified in data_cfg: {data_cfg}")
+        raise ValueError(
+            f"Error! t_range_test is not specified in data_cfg: {data_cfg}"
+        )
     return OrderedDict(sites_id=basins_id, t_final_range=t_range_list)
 
 

@@ -22,6 +22,7 @@ from hydroevaluate.utils.heutils import (
 
 
 def aggregate_dataframe(df, units):
+    # TODO: aggregate 1h data to 3h or 1D
     # agg_df = convert_units(df, units)
     pass
 
@@ -31,7 +32,7 @@ class DapengScalerForEval(object):
         self,
         relevant_vars: np.array,
         constant_vars: np.array,
-        data_cfg: dict,
+        data_cfgs: dict,
         other_vars: dict = None,
         prcp_norm_cols=None,
         gamma_norm_cols=None,
@@ -50,7 +51,7 @@ class DapengScalerForEval(object):
             input dynamic variables
         constant_vars
             input static variables
-        data_cfg
+        data_cfgs
             data parameter config in data source
         is_tra_val_te
             train/valid/test
@@ -74,8 +75,8 @@ class DapengScalerForEval(object):
             ]
         self.data_forcing = relevant_vars
         self.data_attr = constant_vars
-        self.data_cfg = data_cfg
-        self.t_s_dict = wrap_t_s_dict(data_cfg)
+        self.data_cfgs = data_cfgs
+        self.t_s_dict = wrap_t_s_dict(data_cfgs)
         self.data_other = other_vars
         self.prcp_norm_cols = prcp_norm_cols
         self.gamma_norm_cols = gamma_norm_cols
@@ -84,7 +85,7 @@ class DapengScalerForEval(object):
         self.pbm_norm = pbm_norm
         self.data_source = data_source
         # save stat_dict of training period in test_path for valid/test
-        stat_file = data_cfg["stat_file_path"]
+        stat_file = data_cfgs["stat_file_path"]
         assert os.path.isfile(stat_file)
         with open(stat_file, "r") as fp:
             self.stat_dict = json.load(fp)
@@ -92,7 +93,7 @@ class DapengScalerForEval(object):
     @property
     def mean_prcp(self):
         return (
-            self.data_source.read_mean_prcp(self.data_cfg["basin_ids"])
+            self.data_source.read_mean_prcp(self.data_cfgs["object_ids"])
             .to_array()
             .to_numpy()
             .T
@@ -113,7 +114,7 @@ class DapengScalerForEval(object):
             denormalized predictions
         """
         stat_dict = self.stat_dict
-        target_cols = self.data_cfg["target_cols"]
+        target_cols = self.data_cfgs["target_cols"]
         if self.pbm_norm:
             # for pbm's output, its unit is mm/day, so we don't need to recover its unit
             pred = target_values
@@ -125,8 +126,8 @@ class DapengScalerForEval(object):
                 log_norm_cols=self.log_norm_cols,
                 to_norm=False,
             )
-            for i in range(len(self.data_cfg["target_cols"])):
-                var = self.data_cfg["target_cols"][i]
+            for i in range(len(self.data_cfgs["target_cols"])):
+                var = self.data_cfgs["target_cols"][i]
                 pred.loc[dict(variable=var)] = _prcp_norm(
                     pred.sel(variable=var).to_numpy(),
                     self.mean_prcp,
@@ -153,7 +154,7 @@ class DapengScalerForEval(object):
             the dynamic inputs for modeling
         """
         stat_dict = self.stat_dict
-        var_lst = self.data_cfg["var_lst"]
+        var_lst = self.data_cfgs["var_lst"]
         data = self.data_forcing
         data = _trans_norm(
             data, var_lst, stat_dict, log_norm_cols=self.log_norm_cols, to_norm=to_norm
@@ -177,7 +178,7 @@ class DapengScalerForEval(object):
             the static inputs for modeling
         """
         stat_dict = self.stat_dict
-        var_lst = self.data_cfg["constant_vars"]
+        var_lst = self.data_cfgs["constant_vars"]
         data = self.data_attr
         data = _trans_norm(data, var_lst, stat_dict, to_norm=to_norm)
         return data

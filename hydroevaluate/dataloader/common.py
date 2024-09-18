@@ -20,7 +20,7 @@ class EvalDataSource(ABC):
         self.name = name
         self.var_lst = var_lst
 
-    def load_ts_basin_mean(self, basin_lst: list, time_range: list, vars: list):
+    def load_ts_basin_mean(self, basin_lst: list, t_range_test: list, vars: list):
         if not isinstance(vars, list):
             vars = [vars]
         if any(var not in self.var_lst for var in vars):
@@ -29,7 +29,7 @@ class EvalDataSource(ABC):
         for var_ in vars:
             da_lst = []
             for basin_id in basin_lst:
-                data = self.basin_mean_process(basin_id, time_range, var_)
+                data = self.basin_mean_process(basin_id, t_range_test, var_)
                 da_lst.append(data)
             ds_lst.append(da_lst)
         # TODO: this should be trans to a xr.Dataset
@@ -67,9 +67,9 @@ class GPM(EvalDataSource):
     def __init__(self, var_lst):
         super().__init__("GPM", var_lst)
 
-    def basin_mean_process(self, basin_id, time_range, var, tolerance=0.005):
+    def basin_mean_process(self, basin_id, t_range_test, var, tolerance=0.005):
         if var == "gpm_tp":
-            return process_gpm_data(time_range, basin_id, tolerance)
+            return process_gpm_data(t_range_test, basin_id, tolerance)
         else:
             raise ValueError("Variable not supported")
 
@@ -78,14 +78,14 @@ class GFS(EvalDataSource):
     def __init__(self, var_lst):
         super().__init__("GFS", var_lst)
 
-    def basin_mean_process(self, basin_id, time_range, var, tolerance=0.005):
+    def basin_mean_process(self, basin_id, t_range_test, var, tolerance=0.005):
         if var == "gfs_tp":
-            return process_gfs_tp(time_range, basin_id, tolerance)
+            return process_gfs_tp(t_range_test, basin_id, tolerance)
         elif var == "gfs_soilw":
-            return process_gfs_soil(time_range, basin_id)
+            return process_gfs_soil(t_range_test, basin_id)
         elif var in ["d2m", "t2m", "dswrf"]:
             # TODO: this should be more efficient
-            data_ = process_gfs_other_forcing(time_range[0], basin_id, tolerance)
+            data_ = process_gfs_other_forcing(t_range_test[0], basin_id, tolerance)
             return data_.sel(variable=var)
         else:
             raise ValueError("Variable not supported")
@@ -95,9 +95,9 @@ class SMAP(EvalDataSource):
     def __init__(self, var_lst):
         super().__init__("smap_sm_surface", var_lst)
 
-    def basin_mean_process(self, basin_id, time_range, var, tolerance=0.005):
+    def basin_mean_process(self, basin_id, t_range_test, var, tolerance=0.005):
         if var == "smap_sm_surface":
-            return process_smap_sm_surface(time_range, basin_id)
+            return process_smap_sm_surface(t_range_test, basin_id)
         else:
             raise ValueError("Variable not supported")
 
@@ -115,8 +115,8 @@ class MultiSource:
         """
         self._check_source(var_lst)
         # TODO:
-        self._obs_read(var_lst, basin_id_lst, time_range)
-        self._pred_read(var_lst, basin_id_lst, time_range)
+        self._obs_read(var_lst, basin_id_lst, t_range_test)
+        self._pred_read(var_lst, basin_id_lst, t_range_test)
         self._merge()
         self._aggregate()
 

@@ -21,43 +21,39 @@ import yaml
 from scipy import signal
 from yaml import Loader, Dumper
 
-from hydroevaluate.dataloader.data_sets import HydroMeanDatasetForEval
+from hydroevaluate.dataloader.data_sets import Seq2SeqDatasetForEval
 from torchhydro.trainers.train_utils import (
     calculate_and_record_metrics,
 )
 
 from hydroevaluate import SETTING
-from hydroevaluate.dataloader.data_source import SelfMadeHydroDatasetForEval
+from hydrodatasource.reader.data_source import SelfMadeHydroDataset
 from hydroevaluate.modelloader.model_loader import ModelLoader
-from hydroevaluate.configs.config import DEFAULT_cfg
+from hydroevaluate.configs.config import DEFAULT_cfgs
 
 
 class HydroEvaluate(ABC):
     def __init__(self, conf_file=None):
         self.conf_dir = SETTING["conf_dir"]
         self.conf_name = conf_file
-        self.cfg = self._load_cfg()
-        self._check_cfg()
+        self.cfgs = self._load_cfgs()
+        self._check_cfgs()
 
-    def _load_cfg(self):
-        # TODO: add more ways to load cfg
-        return DEFAULT_cfg
+    def _load_cfgs(self):
+        # TODO: add more ways to load cfgs
+        return DEFAULT_cfgs
 
-    def _check_cfg(self):
+    def _check_cfgs(self):
         # TODO: simply check now, more detailed check will be added later
-        if "data_cfg" not in self.cfg:
-            raise KeyError("data_cfg not found in cfg file")
-        if "model_cfg" not in self.cfg:
-            raise KeyError("model_cfg not found in cfg file")
-        if "evaluation_cfg" not in self.cfg:
-            raise KeyError("evaluation_cfg not found in cfg file")
+        if "data_cfgs" not in self.cfgs:
+            raise KeyError("data_cfgs not found in cfgs file")
+        if "model_cfgs" not in self.cfgs:
+            raise KeyError("model_cfgs not found in cfgs file")
+        if "evaluation_cfgs" not in self.cfgs:
+            raise KeyError("evaluation_cfgs not found in cfgs file")
 
     @abstractmethod
     def _load_model(self):
-        pass
-
-    @abstractmethod
-    def _load_data(self):
         pass
 
     @abstractmethod
@@ -72,14 +68,17 @@ class HydroEvaluate(ABC):
 class EvalDeepHydro(HydroEvaluate):
     def __init__(self, conf_file=None):
         super().__init__(conf_file)
-        self.modelloader = ModelLoader(self.cfg["model_cfg"])
-        self.data_source = SelfMadeHydroDatasetForEval(
-            self.cfg["data_cfg"]["data_dir"],
+        self.modelloader = ModelLoader(self.cfgs["model_cfgs"])
+        interval = self.cfgs["data_cfgs"]["min_time_interval"]
+        unit = self.cfgs["data_cfgs"]["min_time_unit"]
+        time_unit = f"{interval}{unit}"
+        self.data_source = SelfMadeHydroDataset(
+            self.cfgs["data_cfgs"]["data_dir"],
             download=False,
-            time_unit=self.cfg["data_cfg"]["data_unit"],
+            time_unit=[time_unit],
         )
-        self.data_set = HydroMeanDatasetForEval(self.cfg["data_cfg"])
-        self.n_grid = len(self.cfg["data_cfg"]["basin_ids"])
+        self.data_set = Seq2SeqDatasetForEval(self.cfgs["data_cfgs"])
+        self.n_grid = len(self.cfgs["data_cfgs"]["object_ids"])
         self.dataloader = DataLoader(
             self.data_set,
             batch_size=int(self.data_set.num_samples / self.n_grid),
@@ -91,24 +90,28 @@ class EvalDeepHydro(HydroEvaluate):
     def _load_model(self):
         return self.modelloader.load_model()
 
-    def _load_data(self):
-        return self.data_set.x, self.data_set.c
-
     def model_infer(self):
-        eval_cfg = self.cfg["evaluation_cfg"]
-        data = self._load_data()
+        eval_cfgs = self.cfgs["evaluation_cfgs"]
+        data_cfgs = self.cfgs["data_cfgs"]
         model = self._load_model()
-        seq_first = eval_cfg["seq_first"]
+        seq_first = eval_cfgs["seq_first"]
+        preds = []
         with torch.no_grad():
-            pred = self.modelloader.infer(seq_first, model, data)
-            pred = pred.cpu().numpy()
+            for xs in self.dataloader:
+                pred_single = self.modelloader.infer(
+                    seq_first=seq_first, model=model, xs=xs
+                )
+                pred_single = pred_single.cpu().numpy()
+                preds.append(torch.tensor(pred_single))
+            pred_final = torch.cat(preds, dim=0)
+        pred = pred_final.detach().cpu().numpy()
         ngrid = self.n_grid
-        if not eval_cfg["long_seq_pred"]:
-            target_len = len(eval_cfg["output_vars"])
-            prec_window = eval_cfg["prec_window"]
+        if not eval_cfgs["long_seq_pred"]:
+            target_len = len(data_cfgs["output_vars"])
+            prec_window = data_cfgs["prec_window"]
             batch_size = self.dataloader.batch_size
-            if eval_cfg["rolling"]:
-                forecast_length = eval_cfg["forecast_length"]
+            if eval_cfgs["rolling"]:
+                forecast_length = data_cfgs["horizon"]
                 pred = pred[:, prec_window:, :].reshape(
                     ngrid, batch_size, forecast_length, target_len
                 )
@@ -123,17 +126,17 @@ class EvalDeepHydro(HydroEvaluate):
         return pred
 
     def model_evaluate(self, obs_xr):
-        eval_cfg = self.cfg["evaluation_cfg"]
+        eval_cfgs = self.cfgs["evaluation_cfgs"]
         pred_xr = self.run_model()
-        fill_nan = eval_cfg["fill_nan"]
+        fill_nan = eval_cfgs["fill_nan"]
         eval_log = {}
-        for i, col in enumerate(eval_cfg["output_vars"]):
+        for i, col in enumerate(eval_cfgs["output_vars"]):
             obs = obs_xr[col].to_numpy()
             pred = pred_xr[col].to_numpy()
             eval_log = calculate_and_record_metrics(
                 obs,
                 pred,
-                eval_cfg["metrics"],
+                eval_cfgs["metrics"],
                 col,
                 fill_nan[i] if isinstance(fill_nan, list) else fill_nan,
                 eval_log,
@@ -143,7 +146,7 @@ class EvalDeepHydro(HydroEvaluate):
         return eval_log, pred_xr, obs_xr
 
     def send_report(self, eval_log):
-        private_yml = self.cfg
+        private_yml = self.cfgs
         # https://zhuanlan.zhihu.com/p/631317974
         send_address = private_yml["email"]["send_address"]
         password = private_yml["email"]["authenticate_code"]
