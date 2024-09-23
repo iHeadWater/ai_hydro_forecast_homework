@@ -107,7 +107,7 @@ class EvalDeepHydro(HydroEvaluate):
         pred = pred_final.detach().cpu().numpy()
         ngrid = self.n_grid
         if not eval_cfgs["long_seq_pred"]:
-            target_len = len(data_cfgs["output_vars"])
+            target_len = len(data_cfgs["target_cols"])
             prec_window = data_cfgs["prec_window"]
             batch_size = self.dataloader.batch_size
             if eval_cfgs["rolling"]:
@@ -121,6 +121,7 @@ class EvalDeepHydro(HydroEvaluate):
                 pred = pred[:, :batch_size, :]
             else:
                 pred = pred[:, prec_window, :].reshape(ngrid, batch_size, target_len)
+            pred = self.data_set.denormalize(pred)
         else:
             pred = self.data_set.denormalize(pred)
         return pred
@@ -130,7 +131,7 @@ class EvalDeepHydro(HydroEvaluate):
         pred_xr = self.run_model()
         fill_nan = eval_cfgs["fill_nan"]
         eval_log = {}
-        for i, col in enumerate(eval_cfgs["output_vars"]):
+        for i, col in enumerate(eval_cfgs["target_cols"]):
             obs = obs_xr[col].to_numpy()
             pred = pred_xr[col].to_numpy()
             eval_log = calculate_and_record_metrics(

@@ -32,7 +32,12 @@ DEFAULT_cfgs = {
         "min_time_interval": 3,
         "t_range_test": [("2015-06-01-01", "2015-08-01-01")],
         "var_lst": ["total_precipitation_hourly", "sm_surface"],
-        "output_vars": ["streamflow", "sm_surface"],
+        "var_self_orgnized": True,
+        "var_params": {
+            "total_precipitation_hourly": {},
+            "sm_surface": {},
+        },
+        "target_cols": ["streamflow", "sm_surface"],
         "rho": 240,
         "horizon": 56,
         "warmup_length": 0,

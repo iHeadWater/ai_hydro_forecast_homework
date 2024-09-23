@@ -133,8 +133,6 @@ class DapengScalerForEval(object):
                     self.mean_prcp,
                     to_norm=False,
                 )
-        # add attrs for units
-        pred.attrs.update(self.data_target.attrs)
         return pred.to_dataset(dim="variable")
 
     def get_data_ts(self, to_norm=True) -> np.array:

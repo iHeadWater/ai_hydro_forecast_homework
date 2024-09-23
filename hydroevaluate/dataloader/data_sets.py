@@ -15,7 +15,6 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 import xarray as xr
-from hydroevaluate.dataloader.data_reader import read_training_data
 from hydrodatasource.reader.data_source import SelfMadeHydroDataset
 from hydroevaluate.utils.heutils import fill_gaps_da, warn_if_nan, wrap_t_s_dict
 from hydroevaluate.dataloader.data_processor import DapengScalerForEval
@@ -157,23 +156,21 @@ class Seq2SeqDatasetForEval(Seq2SeqDataset):
 
     def denormalize(self, output):
         # TODO: make it more general
-        interval = self.data_cfgs["min_time_interval"]
-        unit = self.data_cfgs["min_time_unit"]
-        time_unit = f"{interval}{unit}"
-        selected_time_points = pd.date_range(
-            start=self.data_cfgs["t_range_test"][0],
-            end=self.data_cfgs["t_range_test"][1],
-            freq=time_unit,
-        )
+        selected_time_points = self.times[0][
+            self.data_cfgs["rho"] : -self.data_cfgs["horizon"] + 1
+        ]
+        self.data_cfgs["target_cols"] = self.data_cfgs["target_cols"]
+        dims = ["variable", "basin", "time"]
         coords = {
-            "basin_id": self.data_cfgs["object_ids"],
+            "variable": self.data_cfgs["target_cols"],
+            "basin": self.data_cfgs["object_ids"],
             "time": selected_time_points,
         }
 
         return self.scaler.inverse_transform(
             xr.DataArray(
                 output.transpose(2, 0, 1),
-                dims=self.data_cfgs["output_vars"],
+                dims=dims,
                 coords=coords,
             )
         )
