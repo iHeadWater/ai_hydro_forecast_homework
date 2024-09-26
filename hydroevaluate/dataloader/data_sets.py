@@ -54,6 +54,14 @@ class Seq2SeqDatasetForEval(Seq2SeqDataset):
     def ngrid(self):
         return len(self.data_cfgs["object_ids"])
 
+    @property
+    def category_to_index(self):
+        unique_categories = []
+        for config in self.data_cfgs["feature_mapping"].values():
+            if config["category"] not in unique_categories:
+                unique_categories.append(config["category"])
+        return {category: idx for idx, category in enumerate(unique_categories)}
+
     def _pre_load_data(self):
         self.t_s_dict = wrap_t_s_dict(self.data_cfgs)
         self.rho = self.data_cfgs["rho"]
@@ -91,17 +99,6 @@ class Seq2SeqDatasetForEval(Seq2SeqDataset):
             subset_list.append(subset[time_unit])
         return xr.concat(subset_list, dim="time")
 
-    def _trans2da_and_setunits(self, ds):
-        """Set units for dataarray transfromed from dataset"""
-        result = ds.to_array(dim="variable")
-        units_dict = {
-            var: ds[var].attrs["units"]
-            for var in ds.variables
-            if "units" in ds[var].attrs
-        }
-        result.attrs["units"] = units_dict
-        return result
-
     def _read_xc(self):
         data_forcing_ds = self._read_ts()
         if data_forcing_ds is not None:
@@ -134,9 +131,6 @@ class Seq2SeqDatasetForEval(Seq2SeqDataset):
         warn_if_nan(x, nan_mode="all")
         warn_if_nan(c, nan_mode="all")
         return x, c
-
-    def __len__(self):
-        return self.num_samples
 
     def _normalize(self):
         gamma_norm_cols = self.data_cfgs["scaler_params"]["gamma_norm_cols"]
@@ -202,6 +196,72 @@ class Seq2SeqDatasetForEval(Seq2SeqDataset):
         self.num_samples = len(self.lookup_table)
 
     def __getitem__(self, item: int):
+        basin, idx = self.lookup_table[item]
+        feature_mapping = self.data_cfgs["feature_mapping"]
+        rho = self.rho
+        horizon = self.horizon
+
+        # 提取整个时间段的数据
+        seq_input = self.x[basin, idx:, :]  # shape: (seq_length, feature)
+
+        # 初始化存储结果的字典，基于类别
+        result = {idx: [] for idx in self.category_to_index.values()}
+
+        # 动态生成时间范围
+        time_ranges = []
+        for config in feature_mapping.values():
+            time_ranges.extend(config["time_ranges"])
+
+        # 外层循环遍历时间范围
+        for start, end in time_ranges:
+            # 内层循环遍历所有变量
+            for var_name, config in feature_mapping.items():
+                category_index = self.category_to_index[
+                    config["category"]
+                ]  # 获取类别索引
+
+                # 检查当前时间范围是否在变量的时间范围内
+                if any(start in range(r[0], r[1]) for r in config["time_ranges"]):
+                    feature_index = list(feature_mapping.keys()).index(
+                        var_name
+                    )  # 获取变量在x中的顺序
+                    offset = feature_mapping[var_name]["offset"]  # 获取变量的偏移量
+                    selected_data = seq_input[
+                        start + offset : end + offset, feature_index : feature_index + 1
+                    ]
+
+                    # 将该变量在时间范围内的数据加入结果
+                    if category_index not in result:
+                        result[category_index] = []
+                    result[category_index].append(selected_data)  # shape: (duration, 1)
+
+        # 合并每个类别中的特征
+        for category_index in result:
+            result[category_index] = np.concatenate(
+                result[category_index], axis=0
+            )  # shape: (total_time, all_features)
+
+        # 最终将不同类别的数据拼接在一起
+        x = np.concatenate(
+            list(result.values()), axis=1
+        )  # shape: (total_time, all_variables)
+        c = self.c[basin, :]
+        c = np.tile(c, (rho + horizon, 1))
+        features_only_rho = [
+            self.category_to_index[category]
+            for category in self.data_cfgs["features_only_rho"]
+            if category in self.category_to_index
+        ]
+        x_r = np.concatenate((x[:rho], c[:rho]), axis=1)
+        x_h = np.concatenate((x[rho : rho + horizon], c[rho:]), axis=1)
+        x_h = np.delete(x_h, features_only_rho, axis=1)
+
+        return [
+            torch.from_numpy(x_r).float(),  # 最终输入特征，包含特定时间段的组合
+            torch.from_numpy(x_h).float(),  # 未来时间段的输出特征
+        ]
+
+    def __getitem1__(self, item: int):
         basin, idx = self.lookup_table[item]
         rho = self.rho
         horizon = self.horizon

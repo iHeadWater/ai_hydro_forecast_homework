@@ -31,12 +31,42 @@ DEFAULT_cfgs = {
         "min_time_unit": "h",
         "min_time_interval": 3,
         "t_range_test": [("2015-06-01-01", "2015-08-01-01")],
-        "var_lst": ["total_precipitation_hourly", "sm_surface"],
+        "var_lst": [
+            "total_precipitation_hourly",
+            "precipitationCal",
+            "hourly_precipitation",
+            "sm_surface",
+            "sm_rootzone",
+        ],
         "var_self_orgnized": True,
-        "var_params": {
-            "total_precipitation_hourly": {},
-            "sm_surface": {},
+        "feature_mapping": {
+            "total_precipitation_hourly": {
+                "category": "precipitation",
+                "time_ranges": [(0, 100), (150, 200)],
+                "offset": 1,
+            },
+            "precipitationCal": {
+                "category": "precipitation",
+                "time_ranges": [(100, 150), (200, 241)],
+                "offset": 1,
+            },
+            "hourly_precipitation": {
+                "category": "precipitation",
+                "time_ranges": [(241, 296)],
+                "offset": 1,
+            },
+            "sm_surface": {
+                "category": "soil_moisture",
+                "time_ranges": [(0, 231)],
+                "offset": 0,
+            },
+            "sm_rootzone": {
+                "category": "soil_moisture",
+                "time_ranges": [(231, 296)],
+                "offset": 0,
+            },
         },
+        "features_only_rho": ["soil_moisture"],
         "target_cols": ["streamflow", "sm_surface"],
         "rho": 240,
         "horizon": 56,

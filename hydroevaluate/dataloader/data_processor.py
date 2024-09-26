@@ -128,11 +128,14 @@ class DapengScalerForEval(object):
             )
             for i in range(len(self.data_cfgs["target_cols"])):
                 var = self.data_cfgs["target_cols"][i]
-                pred.loc[dict(variable=var)] = _prcp_norm(
-                    pred.sel(variable=var).to_numpy(),
-                    self.mean_prcp,
-                    to_norm=False,
-                )
+                if var in self.prcp_norm_cols:
+                    pred.loc[dict(variable=var)] = _prcp_norm(
+                        pred.sel(variable=var).to_numpy(),
+                        self.mean_prcp,
+                        to_norm=False,
+                    )
+                else:
+                    pred.loc[dict(variable=var)] = pred.sel(variable=var)
         return pred.to_dataset(dim="variable")
 
     def get_data_ts(self, to_norm=True) -> np.array:
