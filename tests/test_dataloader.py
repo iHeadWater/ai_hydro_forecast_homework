@@ -8,47 +8,19 @@ Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查�
 """
 
 import pytest
+from hydroevaluate.configs.config import DEFAULT_cfgs
 from hydroevaluate.dataloader.data_processor import DapengScalerForEval
 from hydrodatasource.reader.data_source import SelfMadeHydroDataset
 
 
 @pytest.fixture
 def default_config():
-    config = {
-        "data_cfg": {
-            "data_dir": "/ftproot/basins-interim",
-            "stat_file_path": "/home/xushuolong1/hydro/hydroevaluate/data/model/dapengscaler_stat.json",
-            "object_ids": ["songliao_21401550", "songliao_21401050"],
-            "data_unit": ["3h"],
-            "var_lst": ["precipitationCal", "streamflow"],
-            "t_range_test": ["2018-01-01", "2018-03-31"],
-            "constant_vars": [
-                "area",
-                "ele_mt_smn",
-                "slp_dg_sav",
-                "sgr_dk_sav",
-                "for_pc_sse",
-                "glc_cl_smj",
-                "run_mm_syr",
-                "inu_pc_slt",
-                "cmi_ix_syr",
-                "aet_mm_syr",
-                "snw_pc_syr",
-                "swc_pc_syr",
-                "gwt_cm_sav",
-                "cly_pc_sav",
-                "dor_pc_pva",
-            ],
-        },
-        "eval_cfg": {
-            "seq_first": True,
-        },
-    }
-    data_source = SelfMadeHydroDataset(config["data_cfg"]["data_dir"])
+    config = DEFAULT_cfgs
+    data_source = SelfMadeHydroDataset(config["data_cfgs"]["data_dir"])
     scaler = DapengScalerForEval(
-        relevant_vars=config["data_cfg"]["var_lst"],
-        constant_vars=config["data_cfg"]["constant_vars"],
-        data_cfg=config["data_cfg"],
+        relevant_vars=config["data_cfgs"]["var_lst"],
+        constant_vars=config["data_cfgs"]["constant_vars"],
+        data_cfgs=config["data_cfgs"],
         data_source=data_source,
     )
     return config, scaler

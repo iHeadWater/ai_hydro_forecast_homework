@@ -22,26 +22,17 @@ from hydroevaluate.configs.config import DATE_FORMATS
 from torchhydro.datasets.data_sets import Seq2SeqDataset
 
 
-def detect_date_format(date_str):
-    for date_format in DATE_FORMATS:
-        try:
-            datetime.strptime(date_str, date_format)
-            return date_format
-        except ValueError:
-            continue
-    raise ValueError(f"Unknown date format: {date_str}")
-
-
 class Seq2SeqDatasetForEval(Seq2SeqDataset):
     """This dataset is different from the typical dataset in torch, as it is only used for inference and evaluation."""
 
-    def __init__(self, data_cfgs):
+    def __init__(self, data_cfgs, data_source=None):
+        self.data_cfgs = data_cfgs
+        self._data_source = data_source or self.initialize_data_source()
         super(Seq2SeqDatasetForEval, self).__init__(data_cfgs, is_tra_val_te="valid")
         self.train_mode = False
-        self._load_data()
 
-    @property
-    def data_source(self):
+    def initialize_data_source(self):
+        """Initialize default data source based on configuration."""
         interval = self.data_cfgs["min_time_interval"]
         unit = self.data_cfgs["min_time_unit"]
         time_unit = f"{interval}{unit}"
@@ -49,6 +40,10 @@ class Seq2SeqDatasetForEval(Seq2SeqDataset):
             self.data_cfgs["data_dir"],
             time_unit=[time_unit],
         )
+
+    @property
+    def data_source(self):
+        return self._data_source
 
     @property
     def ngrid(self):

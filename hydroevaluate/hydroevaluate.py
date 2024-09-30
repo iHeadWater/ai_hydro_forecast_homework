@@ -67,12 +67,12 @@ class HydroEvaluate(ABC):
 
 
 class EvalDeepHydro(HydroEvaluate):
-    def __init__(self, conf_file=None):
+    def __init__(self, conf_file=None, data_source=None):
         super().__init__(conf_file)
         if self.cfgs["model_cfgs"]["download"]:
             self._download_model()
         self.modelloader = ModelLoader(self.cfgs["model_cfgs"])
-        self.data_set = Seq2SeqDatasetForEval(self.cfgs["data_cfgs"])
+        self.data_set = Seq2SeqDatasetForEval(self.cfgs["data_cfgs"], data_source)
         self.dataloader = DataLoader(
             self.data_set,
             batch_size=int(self.data_set.num_samples / self.n_grid),
@@ -88,6 +88,8 @@ class EvalDeepHydro(HydroEvaluate):
         return len(self.cfgs["data_cfgs"]["object_ids"])
 
     def _download_model(self):
+        api = HubApi()
+        api.login(self.cfgs["model_cfgs"]["api"])
         snapshot_download(
             model_id=self.cfgs["model_cfgs"]["model_repo"],
             revision=self.cfgs["model_cfgs"]["revision"],
