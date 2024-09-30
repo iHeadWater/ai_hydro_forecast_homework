@@ -28,7 +28,6 @@ from torchhydro.trainers.train_utils import (
 )
 
 from hydroevaluate import SETTING
-from hydrodatasource.reader.data_source import SelfMadeHydroDataset
 from hydroevaluate.modelloader.model_loader import ModelLoader
 from hydroevaluate.configs.config import DEFAULT_cfgs
 from torchhydro.models.model_utils import get_the_device
@@ -73,14 +72,6 @@ class EvalDeepHydro(HydroEvaluate):
         if self.cfgs["model_cfgs"]["download"]:
             self._download_model()
         self.modelloader = ModelLoader(self.cfgs["model_cfgs"])
-        interval = self.cfgs["data_cfgs"]["min_time_interval"]
-        unit = self.cfgs["data_cfgs"]["min_time_unit"]
-        time_unit = f"{interval}{unit}"
-        self.data_source = SelfMadeHydroDataset(
-            self.cfgs["data_cfgs"]["data_dir"],
-            download=False,
-            time_unit=[time_unit],
-        )
         self.data_set = Seq2SeqDatasetForEval(self.cfgs["data_cfgs"])
         self.dataloader = DataLoader(
             self.data_set,
