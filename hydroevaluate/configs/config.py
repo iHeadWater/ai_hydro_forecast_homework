@@ -130,6 +130,11 @@ DEFAULT_cfgs = {
         },
     },
     "model_cfgs": {
+        "download": True,
+        "model_repo": "silencesoup/torchhydro-seq2seq-test",
+        "api": "",
+        "revision": "1.0.1",
+        "local_dir": "/home/xushuolong1/hydro/hydroevaluate/data/model_test",
         "model_type": "torchhydro",
         "model_name": "Seq2Seq",
         "model_hyperparam": {
@@ -148,10 +153,11 @@ DEFAULT_cfgs = {
         "param_range_file": None,
         "model_info_file": None,
         "target_unit": "m^3/s",
+        "device": [-1],
     },
     "evaluation_cfgs": {
         "seq_first": False,
-        "rolling": False,
+        "rolling": True,
         "long_seq_pred": False,
     },
 }

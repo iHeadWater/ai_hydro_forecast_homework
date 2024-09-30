@@ -1,3 +1,5 @@
 mlflow
 hydromodel
 torchhydro
+modelscope
+hydrodatasource

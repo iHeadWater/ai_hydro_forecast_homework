@@ -17,6 +17,7 @@ from hydrodatasource.utils.utils import streamflow_unit_conv
 from hydromodel.models.model_dict import MODEL_DICT
 import torch
 from torchhydro.models.model_dict_function import pytorch_model_dict
+from torchhydro.models.model_utils import get_the_device
 
 ALL_MODELS_DICT = {**MODEL_DICT, **pytorch_model_dict}
 
@@ -61,7 +62,8 @@ def load_torchmodel(model_cfgs):
     model_name = model_cfgs["model_name"]
     model_hyperparam = model_cfgs["model_hyperparam"]
     pth_path = model_cfgs["pth_path"]
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device_num = model_cfgs["device"]
+    device = get_the_device(device_num)
     if model_name not in pytorch_model_dict.keys():
         raise ValueError(f"Unsupported model type: {model_name}")
     model = pytorch_model_dict[model_name](**model_hyperparam)
@@ -120,10 +122,10 @@ def infer_torchmodel(**kwargs):
     seq_first = kwargs.get("seq_first", False)
     model = kwargs.get("model", None)
     xs = kwargs.get("xs", None)
+    device = kwargs.get("device", torch.device("cpu"))
     if model is None or xs is None:
         raise ValueError("model and xs should be provided")
     model.eval()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if type(xs) is list:
         xs = [
             (

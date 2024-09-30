@@ -20,7 +20,8 @@ import torch
 import yaml
 from scipy import signal
 from yaml import Loader, Dumper
-
+from modelscope import HubApi
+from modelscope import snapshot_download
 from hydroevaluate.dataloader.data_sets import Seq2SeqDatasetForEval
 from torchhydro.trainers.train_utils import (
     calculate_and_record_metrics,
@@ -30,6 +31,7 @@ from hydroevaluate import SETTING
 from hydrodatasource.reader.data_source import SelfMadeHydroDataset
 from hydroevaluate.modelloader.model_loader import ModelLoader
 from hydroevaluate.configs.config import DEFAULT_cfgs
+from torchhydro.models.model_utils import get_the_device
 
 
 class HydroEvaluate(ABC):
@@ -68,6 +70,8 @@ class HydroEvaluate(ABC):
 class EvalDeepHydro(HydroEvaluate):
     def __init__(self, conf_file=None):
         super().__init__(conf_file)
+        if self.cfgs["model_cfgs"]["download"]:
+            self._download_model()
         self.modelloader = ModelLoader(self.cfgs["model_cfgs"])
         interval = self.cfgs["data_cfgs"]["min_time_interval"]
         unit = self.cfgs["data_cfgs"]["min_time_unit"]
@@ -78,13 +82,25 @@ class EvalDeepHydro(HydroEvaluate):
             time_unit=[time_unit],
         )
         self.data_set = Seq2SeqDatasetForEval(self.cfgs["data_cfgs"])
-        self.n_grid = len(self.cfgs["data_cfgs"]["object_ids"])
         self.dataloader = DataLoader(
             self.data_set,
             batch_size=int(self.data_set.num_samples / self.n_grid),
             shuffle=False,
             drop_last=False,
             timeout=0,
+        )
+        self.device_num = self.cfgs["model_cfgs"]["device"]
+        self.device = get_the_device(self.device_num)
+
+    @property
+    def n_grid(self):
+        return len(self.cfgs["data_cfgs"]["object_ids"])
+
+    def _download_model(self):
+        snapshot_download(
+            model_id=self.cfgs["model_cfgs"]["model_repo"],
+            revision=self.cfgs["model_cfgs"]["revision"],
+            local_dir=self.cfgs["model_cfgs"]["local_dir"],
         )
 
     def _load_model(self):
@@ -121,9 +137,7 @@ class EvalDeepHydro(HydroEvaluate):
                 pred = pred[:, :batch_size, :]
             else:
                 pred = pred[:, prec_window, :].reshape(ngrid, batch_size, target_len)
-            pred = self.data_set.denormalize(pred)
-        else:
-            pred = self.data_set.denormalize(pred)
+        pred = self.data_set.denormalize(pred)
         return pred
 
     def model_evaluate(self, obs_xr):
