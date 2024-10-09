@@ -31,7 +31,7 @@ class CustomDataSource:
     def __init__(self):
         pass
 
-    def read_ts_xrdataset(self):
+    def read_ts_xrdataset(self, gage_id_lst, t_range, var_lst, time_units):
         """
         Returns a dictionary with time units as keys and xarray.Dataset as values.
 
@@ -74,7 +74,7 @@ class CustomDataSource:
         """
         raise NotImplementedError
 
-    def read_attr_xrdataset(self):
+    def read_attr_xrdataset(self, gage_id_lst, var_lst):
         """
         Returns an xarray.Dataset with basin-level variables.
 
@@ -95,7 +95,7 @@ class CustomDataSource:
         """
         raise NotImplementedError
 
-    def read_mean_prcp(self):
+    def read_mean_prcp(self, gage_id_lst):
         """
         the pre_mm_syr variable in attr
 
