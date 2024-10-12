@@ -15,7 +15,12 @@ import pandas as pd
 import xarray as xr
 from hydroevaluate.dataloader.data_source import CustomDataSource
 from hydroevaluate.hydroevaluate import EvalDeepHydro
-from hydroevaluate.configs.config import DEFAULT_cfgs
+from hydroevaluate.configs.config import (
+    DEFAULT_cfgs,
+    default_config_file,
+    update_cfg,
+    cmd,
+)
 
 
 def test_load_config():
@@ -23,6 +28,23 @@ def test_load_config():
     assert "data_cfgs" in eval_deep_hydro.cfgs
     assert "model_cfgs" in eval_deep_hydro.cfgs
     assert "evaluation_cfgs" in eval_deep_hydro.cfgs
+
+
+def test_model_infer_with_cmd():
+    cfg_file = default_config_file()
+    args = cmd(
+        download=True,
+        model_repo="silencesoup/torchhydro-seq2seq-test",
+        api="",
+        revision="1.0.1",
+        local_dir="/home/xushuolong1/hydro/hydroevaluate/data/model_test",
+        model_type="torchhydro",
+        model_name="Seq2Seq",
+    )
+    update_cfg(cfg_file, args)
+    eval_deep_hydro = EvalDeepHydro(cfg_file)
+    pred = eval_deep_hydro.model_infer()
+    print(pred)
 
 
 def test_model_infer():

@@ -162,7 +162,7 @@ def test_nse_with_local_csv():
 
 def test_plot_with_local_csv():
     plot_time_series(
-        "data/gee_gpm_3h/21110400.csv", "data/station_tp/21110400.csv", "tp"
+        "data/gee_gpm_1h/observed.csv", "data/postgres_gpm/simulated.csv", "tp"
     )
 
 

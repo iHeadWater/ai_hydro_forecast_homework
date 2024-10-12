@@ -134,9 +134,9 @@ DEFAULT_cfgs = {
         },
     },
     "model_cfgs": {
-        "download": True,
+        "download": False,
         "model_repo": "silencesoup/torchhydro-seq2seq-test",
-        "api": "a822e6ed-c856-4838-bc80-a5c2f5992d5e",
+        "api": "",
         "revision": "1.0.1",
         "local_dir": "/home/xushuolong1/hydro/hydroevaluate/data/model_test",
         "model_type": "torchhydro",
@@ -400,7 +400,7 @@ def update_cfg(cfg_file, new_args):
     if new_args.scaler_params:
         cfg_file["data_cfgs"]["scaler_params"] = new_args.scaler_params
     if new_args.download:
-        cfg_file["data_cfgs"]["download"] = new_args.download
+        cfg_file["model_cfgs"]["download"] = new_args.download
         cfg_file["model_cfgs"]["local_dir"] = new_args.local_dir
         cfg_file["model_cfgs"]["pth_path"] = os.path.join(
             cfg_file["model_cfgs"]["local_dir"],
