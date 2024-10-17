@@ -125,6 +125,7 @@ def infer_torchmodel(**kwargs):
     device = kwargs.get("device", torch.device("cpu"))
     if model is None or xs is None:
         raise ValueError("model and xs should be provided")
+    model = model.to(device)
     model.eval()
     if type(xs) is list:
         xs = [
