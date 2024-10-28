@@ -37,38 +37,38 @@ DEFAULT_cfgs = {
         "t_range_test": [("2015-06-01-01", "2015-08-01-01")],
         "var_lst": [
             "total_precipitation_hourly",
-            "precipitationCal",
-            "hourly_precipitation",
+            # "precipitationCal",
+            # "hourly_precipitation",
             "sm_surface",
-            "sm_rootzone",
+            # "sm_rootzone",
         ],
         "var_self_orgnized": True,
         "feature_mapping": {
             "total_precipitation_hourly": {
                 "category": "precipitation",
-                "time_ranges": [(0, 100), (150, 200)],
+                "time_ranges": [(0, 296)],
                 "offset": 1,
             },
-            "precipitationCal": {
-                "category": "precipitation",
-                "time_ranges": [(100, 150), (200, 241)],
-                "offset": 1,
-            },
-            "hourly_precipitation": {
-                "category": "precipitation",
-                "time_ranges": [(241, 296)],
-                "offset": 1,
-            },
+            # "precipitationCal": {
+            #     "category": "precipitation",
+            #     "time_ranges": [(0, 296)],
+            #     "offset": 1,
+            # },
+            # "hourly_precipitation": {
+            #     "category": "precipitation",
+            #     "time_ranges": [(231, 296)],
+            #     "offset": 1,
+            # },
             "sm_surface": {
                 "category": "soil_moisture",
-                "time_ranges": [(0, 231)],
+                "time_ranges": [(0, 296)],
                 "offset": 0,
             },
-            "sm_rootzone": {
-                "category": "soil_moisture",
-                "time_ranges": [(231, 296)],
-                "offset": 0,
-            },
+            # "sm_rootzone": {
+            #     "category": "soil_moisture",
+            #     "time_ranges": [(241, 296)],
+            #     "offset": 0,
+            # },
         },
         "features_only_rho": ["soil_moisture"],
         "target_cols": ["streamflow", "sm_surface"],
@@ -157,7 +157,7 @@ DEFAULT_cfgs = {
         "param_range_file": None,
         "model_info_file": None,
         "target_unit": "m^3/s",
-        "device": [-1],
+        "device": [0],
     },
     "evaluation_cfgs": {
         "seq_first": False,

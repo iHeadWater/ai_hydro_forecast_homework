@@ -108,3 +108,18 @@ class CustomDataSource:
         """
         # return self.read_attr_xrdataset(gage_id_lst, ["pre_mm_syr"])
         raise NotImplementedError
+
+
+class CustomDataSourceForHydroModel:
+    """
+    For Xaj Model
+    """
+
+    def __init__(self):
+        pass
+
+    def get_p_and_e_dict(self, gage_id_lst):
+        raise NotImplementedError
+
+    def get_area_dict(self, gage_id_lst):
+        raise NotImplementedError

@@ -27,35 +27,37 @@ def load_hydromodel(model_cfgs):
     Directly load the calibrated model with the given parameters
     one-time call for only one basin now
     """
-    p_and_e = model_cfgs["p_and_e"]
-    area = model_cfgs["area"]
-    calibrated_norm_param_file = model_cfgs["calibrated_norm_param_file"]
-    param_range_file = model_cfgs["param_range_file"]
-    model_info_file = model_cfgs["model_info_file"]
-    target_unit = model_cfgs["target_unit"]
-    target_unit = "m^3/s" if target_unit is None else target_unit
-    if not (p_and_e and area and calibrated_norm_param_file and param_range_file):
-        raise ValueError(
-            "p_and_e, area, calibrated_norm_param_file, param_range_file should be provided"
-        )
-    if model_info_file is None:
-        model_info = {
+    configs = {
+        "calibrated_norm_param_file": model_cfgs["calibrated_norm_param_file"],
+        "param_range_file": model_cfgs["param_range_file"],
+        "target_unit": model_cfgs["target_unit"],
+        "model_info_file": model_cfgs["model_info_file"],
+    }
+
+    # check parameters
+    if not all(
+        [
+            configs["calibrated_norm_param_file"],
+            configs["param_range_file"],
+        ]
+    ):
+        raise ValueError("calibrated_norm_param_file, param_range_file can not be None")
+    configs["target_unit"] = (
+        "m^3/s" if configs["target_unit"] is None else configs["target_unit"]
+    )
+    if configs["model_info_file"] is None:
+        configs["model_info"] = {
             "name": "xaj",
             "source_book": "HF",
             "source_type": "sources5mm",
             "time_interval_hours": 3,
         }
     else:
-        model_info = json.load(open(model_info_file, "r"))
-    calibrated_norm_params = pd.read_csv(calibrated_norm_param_file, index_col=0).values
-    return (
-        p_and_e,
-        area,
-        calibrated_norm_params,
-        param_range_file,
-        model_info,
-        target_unit,
-    )
+        configs["model_info"] = json.load(open(configs["model_info_file"], "r"))
+    configs["calibrated_norm_params"] = pd.read_csv(
+        configs["calibrated_norm_param_file"], index_col=0
+    ).values
+    return configs
 
 
 def load_torchmodel(model_cfgs):
@@ -72,18 +74,11 @@ def load_torchmodel(model_cfgs):
     return model
 
 
-def infer_hydromodel(**kwargs):
-    p_and_e = kwargs.get("p_and_e", None)
-    area = kwargs.get("area", None)
-    calibrated_norm_params = kwargs.get("calibrated_norm_params", None)
-    param_range_file = kwargs.get("param_range_file", None)
-    model_info = kwargs.get("model_info", None)
-    target_unit = kwargs.get("target_unit", None)
-    target_unit = "m^3/s" if target_unit is None else target_unit
-    if not (p_and_e and area and calibrated_norm_params and param_range_file):
-        raise ValueError(
-            "p_and_e, area, calibrated_norm_params, param_range_file should be provided"
-        )
+def infer_hydromodel(area, p_and_e, configs):
+    calibrated_norm_params = configs["calibrated_norm_params"]
+    model_info = configs["model_info"]
+    target_unit = configs["target_unit"]
+    param_range_file = configs["param_range_file"]
     qsim, _ = MODEL_DICT[model_info["name"]](
         p_and_e,
         calibrated_norm_params,

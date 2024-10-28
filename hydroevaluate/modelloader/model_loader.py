@@ -14,6 +14,10 @@ class ModelLoader:
     def __init__(self, model_cfgs):
         self.model_cfgs = model_cfgs
 
+    @property
+    def model_type(self):
+        return self.model_cfgs["model_type"]
+
     def load_model(self):
         if self.model_cfgs["model_type"] in modelloader_dict:
             return modelloader_dict[self.model_cfgs["model_type"]](self.model_cfgs)

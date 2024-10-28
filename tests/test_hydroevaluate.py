@@ -32,12 +32,15 @@ def test_load_config():
 
 def test_model_infer_with_cmd():
     cfg_file = default_config_file()
+    gage_ids = pd.read_csv("data/basin_id(819).csv", dtype={"id": str})[
+        "id"
+    ].values.tolist()
     args = cmd(
-        download=True,
-        model_repo="silencesoup/torchhydro-seq2seq-test",
-        api="",
-        revision="1.0.1",
-        local_dir="/home/xushuolong1/hydro/hydroevaluate/data/model_test",
+        object_ids=gage_ids,
+        t_range_test=[("2015-06-01-01", "2022-08-01-04")],
+        download=False,
+        pth_path="/home/xushuolong1/hydro/hydroevaluate/data/model_old/best_model.pth",
+        stat_file_path="/home/xushuolong1/hydro/hydroevaluate/data/model_old/dapengscaler_stat.json",
         model_type="torchhydro",
         model_name="Seq2Seq",
     )
@@ -45,6 +48,7 @@ def test_model_infer_with_cmd():
     eval_deep_hydro = EvalDeepHydro(cfg_file)
     pred = eval_deep_hydro.model_infer()
     print(pred)
+    # pred.to_netcdf("data/model_old_output/theory/pred.nc")
 
 
 def test_model_infer():

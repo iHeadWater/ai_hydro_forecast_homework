@@ -72,16 +72,23 @@ class EvalDeepHydro(HydroEvaluate):
         if self.cfgs["model_cfgs"]["download"]:
             self._download_model()
         self.modelloader = ModelLoader(self.cfgs["model_cfgs"])
-        self.data_set = Seq2SeqDatasetForEval(self.cfgs["data_cfgs"], data_source)
-        self.dataloader = DataLoader(
-            self.data_set,
-            batch_size=int(self.data_set.num_samples / self.n_grid),
-            shuffle=False,
-            drop_last=False,
-            timeout=0,
-        )
-        self.device_num = self.cfgs["model_cfgs"]["device"]
-        self.device = get_the_device(self.device_num)
+        self.data_source = data_source
+        if self.modelloader.model_type == "torchhydro":
+            self.data_set = Seq2SeqDatasetForEval(
+                self.cfgs["data_cfgs"], self.data_source
+            )
+            self.dataloader = DataLoader(
+                self.data_set,
+                batch_size=int(self.data_set.num_samples / self.n_grid),
+                shuffle=False,
+                drop_last=False,
+                timeout=0,
+            )
+            self.device_num = self.cfgs["model_cfgs"]["device"]
+            self.device = get_the_device(self.device_num)
+        elif self.modelloader.model_type == "hydromodel":
+            if self.data_source is None:
+                raise ValueError("data_source should not be None")
 
     @property
     def n_grid(self):
@@ -100,38 +107,55 @@ class EvalDeepHydro(HydroEvaluate):
         return self.modelloader.load_model()
 
     def model_infer(self):
-        eval_cfgs = self.cfgs["evaluation_cfgs"]
-        data_cfgs = self.cfgs["data_cfgs"]
-        model = self._load_model()
-        seq_first = eval_cfgs["seq_first"]
-        preds = []
-        with torch.no_grad():
-            for xs in self.dataloader:
-                pred_single = self.modelloader.infer(
-                    seq_first=seq_first, model=model, xs=xs
-                )
-                pred_single = pred_single.cpu().numpy()
-                preds.append(torch.tensor(pred_single))
-            pred_final = torch.cat(preds, dim=0)
-        pred = pred_final.detach().cpu().numpy()
-        ngrid = self.n_grid
-        if not eval_cfgs["long_seq_pred"]:
-            target_len = len(data_cfgs["target_cols"])
-            prec_window = data_cfgs["prec_window"]
-            batch_size = self.dataloader.batch_size
-            if eval_cfgs["rolling"]:
-                forecast_length = data_cfgs["horizon"]
-                pred = pred[:, prec_window:, :].reshape(
-                    ngrid, batch_size, forecast_length, target_len
-                )
+        if self.modelloader.model_type == "torchhydro":
+            eval_cfgs = self.cfgs["evaluation_cfgs"]
+            data_cfgs = self.cfgs["data_cfgs"]
+            model = self._load_model()
+            seq_first = eval_cfgs["seq_first"]
+            preds = []
+            with torch.no_grad():
+                for xs in self.dataloader:
+                    pred_single = self.modelloader.infer(
+                        seq_first=seq_first, model=model, xs=xs
+                    )
+                    pred_single = pred_single.cpu().numpy()
+                    preds.append(torch.tensor(pred_single))
+                pred_final = torch.cat(preds, dim=0)
+            pred = pred_final.detach().cpu().numpy()
+            ngrid = self.n_grid
+            if not eval_cfgs["long_seq_pred"]:
+                target_len = len(data_cfgs["target_cols"])
+                prec_window = data_cfgs["prec_window"]
+                batch_size = self.dataloader.batch_size
+                if eval_cfgs["rolling"]:
+                    forecast_length = data_cfgs["horizon"]
+                    pred = pred[:, prec_window:, :].reshape(
+                        ngrid, batch_size, forecast_length, target_len
+                    )
 
-                pred = pred[:, ::forecast_length, :, :]
-                pred = np.concatenate(pred, axis=0).reshape(ngrid, -1, target_len)
-                pred = pred[:, :batch_size, :]
-            else:
-                pred = pred[:, prec_window, :].reshape(ngrid, batch_size, target_len)
-        pred = self.data_set.denormalize(pred)
-        return pred
+                    pred = pred[:, ::forecast_length, :, :]
+                    pred = np.concatenate(pred, axis=0).reshape(ngrid, -1, target_len)
+                    pred = pred[:, :batch_size, :]
+                else:
+                    pred = pred[:, prec_window, :].reshape(
+                        ngrid, batch_size, target_len
+                    )
+            pred = self.data_set.denormalize(pred)
+            return pred
+        elif self.modelloader.model_type == "hydromodel":
+            gage_id_list = self.cfgs["data_cfgs"]["object_ids"]
+            area_dict = self.data_source.get_area_dict()
+            p_and_e_dict = self.data_source.get_p_and_e_dict()
+            model = self._load_model()
+            result_list = []
+            for gage_id in gage_id_list:
+                area = area_dict[gage_id]
+                p_and_e = p_and_e_dict[gage_id]
+                result = self.modelloader.infer(area, p_and_e, model)
+                result_list.append(result)
+            return result_list
+        else:
+            raise NotImplementedError("model type not supported")
 
     def model_evaluate(self, obs_xr):
         eval_cfgs = self.cfgs["evaluation_cfgs"]
