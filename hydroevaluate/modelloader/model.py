@@ -22,42 +22,42 @@ from torchhydro.models.model_utils import get_the_device
 ALL_MODELS_DICT = {**MODEL_DICT, **pytorch_model_dict}
 
 
-def load_hydromodel(model_cfgs):
+def load_hydromodel(model_cfgs, **kwargs):
     """
     Directly load the calibrated model with the given parameters
     one-time call for only one basin now
     """
-    configs = {
-        "calibrated_norm_param_file": model_cfgs["calibrated_norm_param_file"],
-        "param_range_file": model_cfgs["param_range_file"],
-        "target_unit": model_cfgs["target_unit"],
-        "model_info_file": model_cfgs["model_info_file"],
+    gage_id = kwargs.get("gage_id", None)
+    calibrated_norm_param_file = model_cfgs["json_folder"] + "/" + gage_id + ".json"
+    param_range_file = model_cfgs["yaml_folder"] + "/" + gage_id + ".yaml"
+    model = {
+        "calibrated_norm_param_file": calibrated_norm_param_file,
+        "param_range_file": param_range_file,
+        "target_unit": None,
+        "model_info_file": None,
     }
-
+    model_json = json.load(open(calibrated_norm_param_file, "r"))
     # check parameters
-    if not all(
-        [
-            configs["calibrated_norm_param_file"],
-            configs["param_range_file"],
-        ]
-    ):
-        raise ValueError("calibrated_norm_param_file, param_range_file can not be None")
-    configs["target_unit"] = (
-        "m^3/s" if configs["target_unit"] is None else configs["target_unit"]
+    model["target_unit"] = (
+        "m^3/s" if model["target_unit"] is None else model["target_unit"]
     )
-    if configs["model_info_file"] is None:
-        configs["model_info"] = {
+    if model["model_info_file"] is None:
+        model["model_info"] = {
             "name": "xaj",
             "source_book": "HF",
             "source_type": "sources5mm",
             "time_interval_hours": 3,
         }
     else:
-        configs["model_info"] = json.load(open(configs["model_info_file"], "r"))
-    configs["calibrated_norm_params"] = pd.read_csv(
-        configs["calibrated_norm_param_file"], index_col=0
-    ).values
-    return configs
+        model["model_info"] = json.load(open(model["model_info_file"], "r"))
+    df = pd.DataFrame(model_json["paraScopes"])
+    df = df.set_index("key")
+    df = df[["actualValue"]]
+    filtered_df = df.T
+    filtered_df["STCD"] = filtered_df.apply(lambda x: gage_id, axis=1)
+    filtered_df = filtered_df.set_index("STCD")
+    model["calibrated_norm_params"] = filtered_df.values
+    return model
 
 
 def load_torchmodel(model_cfgs):
@@ -74,11 +74,10 @@ def load_torchmodel(model_cfgs):
     return model
 
 
-def infer_hydromodel(area, p_and_e, configs):
-    calibrated_norm_params = configs["calibrated_norm_params"]
-    model_info = configs["model_info"]
-    target_unit = configs["target_unit"]
-    param_range_file = configs["param_range_file"]
+def infer_hydromodel(p_and_e, model):
+    calibrated_norm_params = model["calibrated_norm_params"]
+    model_info = model["model_info"]
+    param_range_file = model["param_range_file"]
     qsim, _ = MODEL_DICT[model_info["name"]](
         p_and_e,
         calibrated_norm_params,
@@ -87,11 +86,7 @@ def infer_hydromodel(area, p_and_e, configs):
         **model_info,
         **{"param_range_file": param_range_file},
     )
-    ureg = pint.UnitRegistry()
-    ureg.force_ndarray_like = True
-    q_sim_with_unit = qsim * ureg.mm / ureg.h / model_info["time_interval_hours"]
-    area_np_with_unit = area * ureg.km**2
-    return streamflow_unit_conv(q_sim_with_unit, area_np_with_unit, target_unit, True)
+    return qsim
 
 
 def infer_torchmodel(**kwargs):

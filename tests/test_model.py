@@ -16,21 +16,13 @@ import torch
 from torchhydro.models.cudnnlstm import CpuLstmModel
 from torchhydro.models.seq2seq import GeneralSeq2Seq
 from hydroevaluate.modelloader.model import load_hydromodel, load_torchmodel
+from hydroevaluate.configs.config import default_config_file
 
 
 def test_load_hydromodel():
     tmpdir = "/home/xushuolong1/hydro/hydroevaluate/data/xaj"
-    calibrated_norm_param_file = os.path.join(tmpdir, "10801300.csv")
-    param_range_file = os.path.join(tmpdir, "10801300.yaml")
-
-    # Call the load_hydromodel function
-    model_cfg = {
-        "calibrated_norm_param_file": calibrated_norm_param_file,
-        "param_range_file": param_range_file,
-        "target_unit": None,
-        "model_info_file": None,
-    }
-    model = load_hydromodel(model_cfg)
+    model_cfgs = default_config_file()["model_cfgs"]
+    model = load_hydromodel(model_cfgs, gage_id="songliao_21401550")
     print(model)
     # Add more assertions as needed to validate the result
 

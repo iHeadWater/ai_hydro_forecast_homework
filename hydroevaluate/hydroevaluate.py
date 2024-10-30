@@ -14,6 +14,7 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import pandas as pd
 from torch.utils.data import DataLoader
 import numpy as np
 import torch
@@ -23,6 +24,7 @@ from yaml import Loader, Dumper
 from modelscope import HubApi
 from modelscope import snapshot_download
 from hydroevaluate.dataloader.data_sets import Seq2SeqDatasetForEval
+from hydroevaluate.dataloader.data_source import StandardDataSourceForHydroModel
 from torchhydro.trainers.train_utils import (
     calculate_and_record_metrics,
 )
@@ -35,14 +37,8 @@ from torchhydro.models.model_utils import get_the_device
 
 class HydroEvaluate(ABC):
     def __init__(self, conf_file=None):
-        self.conf_dir = SETTING["conf_dir"]
-        self.conf_name = conf_file
-        self.cfgs = self._load_cfgs()
+        self.cfgs = conf_file
         self._check_cfgs()
-
-    def _load_cfgs(self):
-        # TODO: add more ways to load cfgs
-        return DEFAULT_cfgs
 
     def _check_cfgs(self):
         # TODO: simply check now, more detailed check will be added later
@@ -73,22 +69,16 @@ class EvalDeepHydro(HydroEvaluate):
             self._download_model()
         self.modelloader = ModelLoader(self.cfgs["model_cfgs"])
         self.data_source = data_source
-        if self.modelloader.model_type == "torchhydro":
-            self.data_set = Seq2SeqDatasetForEval(
-                self.cfgs["data_cfgs"], self.data_source
-            )
-            self.dataloader = DataLoader(
-                self.data_set,
-                batch_size=int(self.data_set.num_samples / self.n_grid),
-                shuffle=False,
-                drop_last=False,
-                timeout=0,
-            )
-            self.device_num = self.cfgs["model_cfgs"]["device"]
-            self.device = get_the_device(self.device_num)
-        elif self.modelloader.model_type == "hydromodel":
-            if self.data_source is None:
-                raise ValueError("data_source should not be None")
+        self.data_set = Seq2SeqDatasetForEval(self.cfgs["data_cfgs"], self.data_source)
+        self.dataloader = DataLoader(
+            self.data_set,
+            batch_size=int(self.data_set.num_samples / self.n_grid),
+            shuffle=False,
+            drop_last=False,
+            timeout=0,
+        )
+        self.device_num = self.cfgs["model_cfgs"]["device"]
+        self.device = get_the_device(self.device_num)
 
     @property
     def n_grid(self):
@@ -107,55 +97,38 @@ class EvalDeepHydro(HydroEvaluate):
         return self.modelloader.load_model()
 
     def model_infer(self):
-        if self.modelloader.model_type == "torchhydro":
-            eval_cfgs = self.cfgs["evaluation_cfgs"]
-            data_cfgs = self.cfgs["data_cfgs"]
-            model = self._load_model()
-            seq_first = eval_cfgs["seq_first"]
-            preds = []
-            with torch.no_grad():
-                for xs in self.dataloader:
-                    pred_single = self.modelloader.infer(
-                        seq_first=seq_first, model=model, xs=xs
-                    )
-                    pred_single = pred_single.cpu().numpy()
-                    preds.append(torch.tensor(pred_single))
-                pred_final = torch.cat(preds, dim=0)
-            pred = pred_final.detach().cpu().numpy()
-            ngrid = self.n_grid
-            if not eval_cfgs["long_seq_pred"]:
-                target_len = len(data_cfgs["target_cols"])
-                prec_window = data_cfgs["prec_window"]
-                batch_size = self.dataloader.batch_size
-                if eval_cfgs["rolling"]:
-                    forecast_length = data_cfgs["horizon"]
-                    pred = pred[:, prec_window:, :].reshape(
-                        ngrid, batch_size, forecast_length, target_len
-                    )
+        eval_cfgs = self.cfgs["evaluation_cfgs"]
+        data_cfgs = self.cfgs["data_cfgs"]
+        model = self._load_model()
+        seq_first = eval_cfgs["seq_first"]
+        preds = []
+        with torch.no_grad():
+            for xs in self.dataloader:
+                pred_single = self.modelloader.infer(
+                    seq_first=seq_first, model=model, xs=xs
+                )
+                pred_single = pred_single.cpu().numpy()
+                preds.append(torch.tensor(pred_single))
+            pred_final = torch.cat(preds, dim=0)
+        pred = pred_final.detach().cpu().numpy()
+        ngrid = self.n_grid
+        if not eval_cfgs["long_seq_pred"]:
+            target_len = len(data_cfgs["target_cols"])
+            prec_window = data_cfgs["prec_window"]
+            batch_size = self.dataloader.batch_size
+            if eval_cfgs["rolling"]:
+                forecast_length = data_cfgs["horizon"]
+                pred = pred[:, prec_window:, :].reshape(
+                    ngrid, batch_size, forecast_length, target_len
+                )
 
-                    pred = pred[:, ::forecast_length, :, :]
-                    pred = np.concatenate(pred, axis=0).reshape(ngrid, -1, target_len)
-                    pred = pred[:, :batch_size, :]
-                else:
-                    pred = pred[:, prec_window, :].reshape(
-                        ngrid, batch_size, target_len
-                    )
-            pred = self.data_set.denormalize(pred)
-            return pred
-        elif self.modelloader.model_type == "hydromodel":
-            gage_id_list = self.cfgs["data_cfgs"]["object_ids"]
-            area_dict = self.data_source.get_area_dict()
-            p_and_e_dict = self.data_source.get_p_and_e_dict()
-            model = self._load_model()
-            result_list = []
-            for gage_id in gage_id_list:
-                area = area_dict[gage_id]
-                p_and_e = p_and_e_dict[gage_id]
-                result = self.modelloader.infer(area, p_and_e, model)
-                result_list.append(result)
-            return result_list
-        else:
-            raise NotImplementedError("model type not supported")
+                pred = pred[:, ::forecast_length, :, :]
+                pred = np.concatenate(pred, axis=0).reshape(ngrid, -1, target_len)
+                pred = pred[:, :batch_size, :]
+            else:
+                pred = pred[:, prec_window, :].reshape(ngrid, batch_size, target_len)
+        pred = self.data_set.denormalize(pred)
+        return pred
 
     def model_evaluate(self, obs_xr):
         eval_cfgs = self.cfgs["evaluation_cfgs"]
@@ -207,3 +180,51 @@ class EvalDeepHydro(HydroEvaluate):
             send_address, private_yml["email"]["to_address"], msg.as_string()
         )
         print("发送成功")
+
+
+class EvalHydroModel(HydroEvaluate):
+    def __init__(self, cfgs):
+        super().__init__(cfgs)
+        self.data_cfgs = cfgs["data_cfgs"]
+        self.model_cfgs = cfgs["model_cfgs"]
+        self.modelloader = ModelLoader(cfgs["model_cfgs"])
+        self.data_source = StandardDataSourceForHydroModel(cfgs["data_cfgs"])
+
+    def _load_model(self, gage_id):
+        return self.modelloader.load_model(gage_id=gage_id)
+
+    def model_evaluate(self):
+        pass
+
+    def model_infer(self):
+        gage_id_list = self.cfgs["data_cfgs"]["object_ids"]
+        p_and_e_dict = self.data_source.get_p_and_e_dict(gage_id_list)
+        for gage_id in gage_id_list:
+            model = self._load_model(gage_id)
+            p_and_e_list = p_and_e_dict[gage_id]
+            result_list = []
+            for p_and_e in p_and_e_list:
+                time_df = p_and_e["time"]
+                p_and_e = p_and_e[["rain", "pet"]].values.reshape(-1, 1, 2)
+                result = self.modelloader.infer(p_and_e=p_and_e, model=model)
+                flattened_array = result.flatten()
+                df_qsim = pd.DataFrame(flattened_array, columns=["qsim"])
+                gage_id_df = pd.DataFrame([gage_id] * len(df_qsim), columns=["basin"])
+                df_qsim = pd.concat([gage_id_df, time_df, df_qsim], axis=1)
+                df_qsim = df_qsim[["basin", "time", "qsim"]]
+                df_qsim.columns = ["basin", "time", "flow"]
+                rho = self.data_cfgs["rho"]
+                result = df_qsim.iloc[rho:].reset_index(drop=True)
+                result_list.append(result)
+            gage_result = (
+                pd.concat(result_list).sort_values(by="time").reset_index(drop=True)
+            )
+            if not os.path.exists(self.cfgs["evaluation_cfgs"]["output_folder"]):
+                os.makedirs(self.cfgs["evaluation_cfgs"]["output_folder"])
+            gage_result.to_csv(
+                os.path.join(
+                    self.cfgs["evaluation_cfgs"]["output_folder"],
+                    f"{gage_id}.csv",
+                ),
+                index=False,
+            )

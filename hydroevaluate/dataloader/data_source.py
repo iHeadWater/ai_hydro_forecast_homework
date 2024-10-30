@@ -7,12 +7,25 @@ FilePath: /hydroevaluate/hydroevaluate/dataloader/data_source.py
 Description: 
 """
 
+from datetime import datetime, timedelta
+import json
+import numpy as np
+import pandas as pd
+import tqdm
+import xarray as xr
+import os
+import re
+from hydroutils import hydro_file
+from hydrodatasource.reader.data_source import SelfMadeHydroDataset
 
-class CustomDataSource:
+CACHE_DIR = hydro_file.get_cache_dir()
+
+
+class CustomDataSourceForTorchHydro:
     """
     This part is for selfmade data source, you need to implement the functions below.
     Here is an example when you use your own data_source:
-        class MyDataSource(CustomDataSource):
+        class MyDataSource(CustomDataSourceForTorchHydro):
             def __init__(self):
                 super().__init__()
             def read_ts_xrdataset(self):
@@ -23,7 +36,7 @@ class CustomDataSource:
                 ...
             def other_function(self):
                 <if you need>
-        data_source = CustomDataSource()
+        data_source = CustomDataSourceForTorchHydro()
         eval_deep_hydro = EvalDeepHydro(DEFAULT_cfgs, data_source=data_source)
         eval_deep_hydro.model_infer()
     """
@@ -121,5 +134,90 @@ class CustomDataSourceForHydroModel:
     def get_p_and_e_dict(self, gage_id_lst):
         raise NotImplementedError
 
-    def get_area_dict(self, gage_id_lst):
-        raise NotImplementedError
+
+class StandardDataSourceForHydroModel(CustomDataSourceForHydroModel):
+    def __init__(self, data_cfgs):
+        super().__init__()
+        self.data_cfgs = data_cfgs
+        self.time_unit = (
+            str(data_cfgs["min_time_interval"]) + data_cfgs["min_time_unit"]
+        )
+        self.temp_datasource = SelfMadeHydroDataset(
+            data_path=data_cfgs["data_dir"], time_unit=[self.time_unit]
+        )
+
+    def get_p_and_e_dict(self, gage_id_lst):
+        time_range = self.data_cfgs["t_range_test"]
+        converted_times = [
+            [
+                datetime.strptime(start, "%Y-%m-%d-%H").strftime("%Y-%m-%d %H:00:00"),
+                datetime.strptime(end, "%Y-%m-%d-%H").strftime("%Y-%m-%d %H:00:00"),
+            ]
+            for start, end in time_range
+        ][0]
+        var_lst = self.data_cfgs["var_lst"]
+        ds = self.temp_datasource.read_ts_xrdataset(
+            gage_id_lst, converted_times, var_lst
+        )[self.time_unit]
+        p_and_e_dict = {}
+        for gage_id in gage_id_lst:
+            rho = self.data_cfgs["rho"]
+            horizon = self.data_cfgs["horizon"]
+            full_length = rho + horizon
+            feature_mapping = self.data_cfgs["feature_mapping"]
+            pet_data = json.load(
+                open(
+                    os.path.join(self.data_cfgs["json_folder"], f"{gage_id}.json"), "r"
+                )
+            )["pets"]
+            pet_value_map = {entry["month"]: entry["petValue"] for entry in pet_data}
+
+            dataframes = []
+
+            for i in range(0, len(ds.time), horizon):
+                if i + full_length > len(ds.time):
+                    break
+
+                time_segment = ds.time[i : i + full_length].values
+
+                rain = []
+                for feature, config in feature_mapping.items():
+                    for time_range in config["time_ranges"]:
+                        start, end = time_range
+                        rain.extend(
+                            ds[feature]
+                            .isel(time=slice(i + start, i + end))
+                            .values.flatten()
+                            .tolist()
+                        )
+
+                rain = rain[:full_length] + [np.nan] * (full_length - len(rain))
+
+                streamflow_values = (
+                    ds["streamflow"].isel(time=slice(i, i + rho)).values.flatten()
+                )
+                streamflow = np.pad(
+                    streamflow_values, (0, horizon), constant_values=np.nan
+                )
+
+                pet = [
+                    pet_value_map.get(pd.Timestamp(t).month, np.nan)
+                    for t in time_segment
+                ]
+
+                month_values = [pd.Timestamp(t).month for t in time_segment]
+                basin_values = [gage_id] * len(time_segment)
+
+                df = pd.DataFrame(
+                    {
+                        "time": time_segment,
+                        "rain": rain,
+                        "flow": streamflow,
+                        "pet": pet,
+                        "month": month_values,
+                        "basin": basin_values,
+                    }
+                )
+                dataframes.append(df)
+            p_and_e_dict[gage_id] = dataframes
+        return p_and_e_dict

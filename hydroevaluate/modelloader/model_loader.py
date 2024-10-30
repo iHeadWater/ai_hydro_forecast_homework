@@ -18,9 +18,11 @@ class ModelLoader:
     def model_type(self):
         return self.model_cfgs["model_type"]
 
-    def load_model(self):
+    def load_model(self, **kwargs):
         if self.model_cfgs["model_type"] in modelloader_dict:
-            return modelloader_dict[self.model_cfgs["model_type"]](self.model_cfgs)
+            return modelloader_dict[self.model_cfgs["model_type"]](
+                self.model_cfgs, **kwargs
+            )
         else:
             raise ValueError(
                 f'model type {self.model_cfgs["model_type"]} is not supported'

@@ -13,8 +13,8 @@ import os
 import numpy as np
 import pandas as pd
 import xarray as xr
-from hydroevaluate.dataloader.data_source import CustomDataSource
-from hydroevaluate.hydroevaluate import EvalDeepHydro
+from hydroevaluate.dataloader.data_source import CustomDataSourceForTorchHydro
+from hydroevaluate.hydroevaluate import EvalDeepHydro, EvalHydroModel
 from hydroevaluate.configs.config import (
     DEFAULT_cfgs,
     default_config_file,
@@ -36,11 +36,11 @@ def test_model_infer_with_cmd():
         "id"
     ].values.tolist()
     args = cmd(
-        object_ids=gage_ids,
-        t_range_test=[("2015-06-01-01", "2022-08-01-04")],
-        download=False,
-        pth_path="/home/xushuolong1/hydro/hydroevaluate/data/model_old/best_model.pth",
-        stat_file_path="/home/xushuolong1/hydro/hydroevaluate/data/model_old/dapengscaler_stat.json",
+        # object_ids=gage_ids,
+        # t_range_test=[("2015-06-01-01", "2022-08-01-04")],
+        # download=False,
+        # pth_path="/home/xushuolong1/hydro/hydroevaluate/data/model_old/best_model.pth",
+        # stat_file_path="/home/xushuolong1/hydro/hydroevaluate/data/model_old/dapengscaler_stat.json",
         model_type="torchhydro",
         model_name="Seq2Seq",
     )
@@ -48,7 +48,7 @@ def test_model_infer_with_cmd():
     eval_deep_hydro = EvalDeepHydro(cfg_file)
     pred = eval_deep_hydro.model_infer()
     print(pred)
-    # pred.to_netcdf("data/model_old_output/theory/pred.nc")
+    pred.to_netcdf("/home/xushuolong1/hydro/hydroevaluate/data/model_output/pred.nc")
 
 
 def test_model_infer():
@@ -68,7 +68,7 @@ def test_model_infer():
     print(pred)
 
 
-class MockDataSource(CustomDataSource):
+class MockDataSource(CustomDataSourceForTorchHydro):
     """
     Custom implementation of SelfMadeDataSource that provides fake data with required attributes.
     """
@@ -180,3 +180,11 @@ def test_model_infer_with_self_made_data():
     eval_deep_hydro = EvalDeepHydro(DEFAULT_cfgs, data_source)
     pred = eval_deep_hydro.model_infer()
     print(pred)
+
+
+def test_hydromodel_infer():
+    args = cmd(model_type="hydromodel")
+    cfg_file = default_config_file()
+    update_cfg(cfg_file, args)
+    eval_hydro_model = EvalHydroModel(cfg_file)
+    eval_hydro_model.model_infer()
