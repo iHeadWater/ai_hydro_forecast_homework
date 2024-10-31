@@ -161,6 +161,7 @@ class StandardDataSourceForHydroModel(CustomDataSourceForHydroModel):
         )[self.time_unit]
         p_and_e_dict = {}
         for gage_id in gage_id_lst:
+            ds_gage = ds.sel(basin=gage_id)
             rho = self.data_cfgs["rho"]
             horizon = self.data_cfgs["horizon"]
             full_length = rho + horizon
@@ -174,18 +175,18 @@ class StandardDataSourceForHydroModel(CustomDataSourceForHydroModel):
 
             dataframes = []
 
-            for i in range(0, len(ds.time), horizon):
-                if i + full_length > len(ds.time):
+            for i in range(0, len(ds_gage.time), horizon):
+                if i + full_length > len(ds_gage.time):
                     break
 
-                time_segment = ds.time[i : i + full_length].values
+                time_segment = ds_gage.time[i : i + full_length].values
 
                 rain = []
                 for feature, config in feature_mapping.items():
                     for time_range in config["time_ranges"]:
                         start, end = time_range
                         rain.extend(
-                            ds[feature]
+                            ds_gage[feature]
                             .isel(time=slice(i + start, i + end))
                             .values.flatten()
                             .tolist()
@@ -194,7 +195,7 @@ class StandardDataSourceForHydroModel(CustomDataSourceForHydroModel):
                 rain = rain[:full_length] + [np.nan] * (full_length - len(rain))
 
                 streamflow_values = (
-                    ds["streamflow"].isel(time=slice(i, i + rho)).values.flatten()
+                    ds_gage["streamflow"].isel(time=slice(i, i + rho)).values.flatten()
                 )
                 streamflow = np.pad(
                     streamflow_values, (0, horizon), constant_values=np.nan

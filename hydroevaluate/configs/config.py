@@ -33,7 +33,7 @@ DEFAULT_cfgs = {
         "json_folder": "/home/xushuolong1/hydro/hydroevaluate/data/json",
         "stat_file_path": "/home/xushuolong1/hydro/hydroevaluate/data/model/dapengscaler_stat.json",
         # "object_ids": ["camels_01013500", "camels_01030500"],
-        "object_ids": ["songliao_21401550"],
+        "object_ids": ["songliao_21401550", "songliao_21401050"],
         "min_time_unit": "h",
         "min_time_interval": 3,
         "t_range_test": [("2019-06-01-01", "2019-10-01-01")],
