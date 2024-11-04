@@ -200,31 +200,36 @@ class EvalHydroModel(HydroEvaluate):
         gage_id_list = self.cfgs["data_cfgs"]["object_ids"]
         p_and_e_dict = self.data_source.get_p_and_e_dict(gage_id_list)
         for gage_id in gage_id_list:
-            model = self._load_model(gage_id)
-            p_and_e_list = p_and_e_dict[gage_id]
-            result_list = []
-            for p_and_e in p_and_e_list:
-                time_df = p_and_e["time"]
-                p_and_e = p_and_e[["rain", "pet"]].values.reshape(-1, 1, 2)
-                result = self.modelloader.infer(p_and_e=p_and_e, model=model)
-                flattened_array = result.flatten()
-                df_qsim = pd.DataFrame(flattened_array, columns=["qsim"])
-                gage_id_df = pd.DataFrame([gage_id] * len(df_qsim), columns=["basin"])
-                df_qsim = pd.concat([gage_id_df, time_df, df_qsim], axis=1)
-                df_qsim = df_qsim[["basin", "time", "qsim"]]
-                df_qsim.columns = ["basin", "time", "flow"]
-                rho = self.data_cfgs["rho"]
-                result = df_qsim.iloc[rho:].reset_index(drop=True)
-                result_list.append(result)
-            gage_result = (
-                pd.concat(result_list).sort_values(by="time").reset_index(drop=True)
-            )
-            if not os.path.exists(self.cfgs["evaluation_cfgs"]["output_folder"]):
-                os.makedirs(self.cfgs["evaluation_cfgs"]["output_folder"])
-            gage_result.to_csv(
-                os.path.join(
-                    self.cfgs["evaluation_cfgs"]["output_folder"],
-                    f"{gage_id}.csv",
-                ),
-                index=False,
-            )
+            try:
+                model = self._load_model(gage_id)
+                p_and_e_list = p_and_e_dict[gage_id]
+                result_list = []
+                for p_and_e in p_and_e_list:
+                    time_df = p_and_e["time"]
+                    p_and_e = p_and_e[["rain", "pet"]].values.reshape(-1, 1, 2)
+                    result = self.modelloader.infer(p_and_e=p_and_e, model=model)
+                    flattened_array = result.flatten()
+                    df_qsim = pd.DataFrame(flattened_array, columns=["qsim"])
+                    gage_id_df = pd.DataFrame(
+                        [gage_id] * len(df_qsim), columns=["basin"]
+                    )
+                    df_qsim = pd.concat([gage_id_df, time_df, df_qsim], axis=1)
+                    df_qsim = df_qsim[["basin", "time", "qsim"]]
+                    df_qsim.columns = ["basin", "time", "flow"]
+                    rho = self.data_cfgs["rho"]
+                    result = df_qsim.iloc[rho:].reset_index(drop=True)
+                    result_list.append(result)
+                gage_result = (
+                    pd.concat(result_list).sort_values(by="time").reset_index(drop=True)
+                )
+                if not os.path.exists(self.cfgs["evaluation_cfgs"]["output_folder"]):
+                    os.makedirs(self.cfgs["evaluation_cfgs"]["output_folder"])
+                gage_result.to_csv(
+                    os.path.join(
+                        self.cfgs["evaluation_cfgs"]["output_folder"],
+                        f"{gage_id}.csv",
+                    ),
+                    index=False,
+                )
+            except Exception as e:
+                print(e)
