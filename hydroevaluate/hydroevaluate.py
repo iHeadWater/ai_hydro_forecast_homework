@@ -206,6 +206,7 @@ class EvalHydroModel(HydroEvaluate):
                 result_list = []
                 for p_and_e in p_and_e_list:
                     time_df = p_and_e["time"]
+                    p_and_e["rain"] = p_and_e["rain"].fillna(0)
                     p_and_e = p_and_e[["rain", "pet"]].values.reshape(-1, 1, 2)
                     result = self.modelloader.infer(p_and_e=p_and_e, model=model)
                     flattened_array = result.flatten()
