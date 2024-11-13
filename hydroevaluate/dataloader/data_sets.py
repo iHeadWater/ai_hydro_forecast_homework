@@ -145,9 +145,8 @@ class Seq2SeqDatasetForEval(Seq2SeqDataset):
 
     def denormalize(self, output):
         # TODO: make it more general
-        selected_time_points = self.times[0][
-            self.data_cfgs["rho"] : -self.data_cfgs["horizon"] + 1
-        ]
+        prec_window = self.data_cfgs["prec_window"]
+        selected_time_points = self.times[0][self.data_cfgs["rho"] - prec_window :]
         self.data_cfgs["target_cols"] = self.data_cfgs["target_cols"]
         dims = ["variable", "basin", "time"]
         coords = {

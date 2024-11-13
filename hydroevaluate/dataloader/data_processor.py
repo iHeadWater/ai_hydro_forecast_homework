@@ -92,12 +92,13 @@ class DapengScalerForEval(object):
 
     @property
     def mean_prcp(self):
-        return (
-            self.data_source.read_mean_prcp(self.data_cfgs["object_ids"])
-            .to_array()
-            .to_numpy()
-            .T
+        interval = self.data_cfgs["min_time_interval"]
+        unit = self.data_cfgs["min_time_unit"]
+        final_unit = f"mm/{interval}{unit}"
+        mean_prcp = self.data_source.read_mean_prcp(
+            self.t_s_dict["sites_id"], unit=final_unit
         )
+        return mean_prcp.to_array().transpose("basin", "variable").to_numpy()
 
     def inverse_transform(self, target_values):
         """

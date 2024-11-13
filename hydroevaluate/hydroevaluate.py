@@ -20,6 +20,7 @@ import numpy as np
 import torch
 import yaml
 from scipy import signal
+from functools import reduce
 from yaml import Loader, Dumper
 from modelscope import HubApi
 from modelscope import snapshot_download
@@ -101,32 +102,31 @@ class EvalDeepHydro(HydroEvaluate):
         data_cfgs = self.cfgs["data_cfgs"]
         model = self._load_model()
         seq_first = eval_cfgs["seq_first"]
-        preds = []
+        test_preds = []
         with torch.no_grad():
             for xs in self.dataloader:
-                pred_single = self.modelloader.infer(
-                    seq_first=seq_first, model=model, xs=xs
-                )
-                pred_single = pred_single.cpu().numpy()
-                preds.append(torch.tensor(pred_single))
-            pred_final = torch.cat(preds, dim=0)
-        pred = pred_final.detach().cpu().numpy()
+                pred = self.modelloader.infer(seq_first=seq_first, model=model, xs=xs)
+                test_preds.append(pred.cpu().numpy())
+            pred = reduce(lambda x, y: np.vstack((x, y)), test_preds)
         ngrid = self.n_grid
-        if not eval_cfgs["long_seq_pred"]:
+        if eval_cfgs["rolling"]:
+            # TODO: now we only guarantee each time has only one value,
+            # so we directly reshape the data rather than a real rolling
+            nt = self.data_set.nt
             target_len = len(data_cfgs["target_cols"])
             prec_window = data_cfgs["prec_window"]
-            batch_size = self.dataloader.batch_size
-            if eval_cfgs["rolling"]:
-                forecast_length = data_cfgs["horizon"]
-                pred = pred[:, prec_window:, :].reshape(
-                    ngrid, batch_size, forecast_length, target_len
-                )
-
-                pred = pred[:, ::forecast_length, :, :]
-                pred = np.concatenate(pred, axis=0).reshape(ngrid, -1, target_len)
-                pred = pred[:, :batch_size, :]
-            else:
-                pred = pred[:, prec_window, :].reshape(ngrid, batch_size, target_len)
+            forecast_length = data_cfgs["horizon"]
+            window_size = prec_window + forecast_length
+            rho = data_cfgs["rho"]
+            recover_len = nt - rho + prec_window
+            samples = int(pred.shape[0] / ngrid)
+            pred_ = np.full((ngrid, recover_len, target_len), np.nan)
+            # recover pred to pred_ and obs to obs_
+            pred_4d = pred.reshape(ngrid, samples, window_size, target_len)
+            for i in range(ngrid):
+                for j in range(recover_len - window_size + 1):
+                    pred_[i, j : j + window_size, :] = pred_4d[i, j, :, :]
+            pred = pred_.reshape(ngrid, recover_len, target_len)
         pred = self.data_set.denormalize(pred)
         return pred
 
