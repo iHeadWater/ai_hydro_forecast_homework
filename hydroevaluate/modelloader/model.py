@@ -71,7 +71,6 @@ def load_torchmodel(model_cfgs):
         raise ValueError(f"Unsupported model type: {model_name}")
     model = pytorch_model_dict[model_name](**model_hyperparam)
     model.load_state_dict(torch.load(pth_path, map_location=device, weights_only=True))
-    model = model.to(device)
     return model
 
 
