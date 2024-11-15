@@ -39,34 +39,34 @@ DEFAULT_cfgs = {
         "t_range_test": [("2019-06-01-01", "2019-10-01-01")],
         "var_lst": [
             "total_precipitation_hourly",
-            "precipitationCal",
-            "hourly_precipitation",
-            "streamflow",
-            # "sm_surface",
+            # "precipitationCal",
+            # "hourly_precipitation",
+            # "streamflow",
+            "sm_surface",
             # "sm_rootzone",
         ],
         "var_self_orgnized": True,
         "feature_mapping": {
             "total_precipitation_hourly": {
                 "category": "precipitation",
-                "time_ranges": [(0, 50)],
+                "time_ranges": [(0, 296)],
                 "offset": 1,
             },
-            "precipitationCal": {
-                "category": "precipitation",
-                "time_ranges": [(50, 200)],
-                "offset": 1,
-            },
-            "hourly_precipitation": {
-                "category": "precipitation",
-                "time_ranges": [(200, 248)],
-                "offset": 1,
-            },
-            # "sm_surface": {
-            #     "category": "soil_moisture",
-            #     "time_ranges": [(0, 3)],
+            # "precipitationCal": {
+            #     "category": "precipitation",
+            #     "time_ranges": [(0, 248)],
+            #     "offset": 1,
+            # },
+            # "hourly_precipitation": {
+            #     "category": "precipitation",
+            #     "time_ranges": [(0, 248)],
             #     "offset": 0,
             # },
+            "sm_surface": {
+                "category": "soil_moisture",
+                "time_ranges": [(0, 296)],
+                "offset": 0,
+            },
             # "sm_rootzone": {
             #     "category": "soil_moisture",
             #     "time_ranges": [(3, 8)],
@@ -76,7 +76,7 @@ DEFAULT_cfgs = {
         "features_only_rho": ["soil_moisture"],
         "target_cols": ["streamflow", "sm_surface"],
         "rho": 240,
-        "horizon": 8,
+        "horizon": 56,
         "warmup_length": 0,
         "prec_window": 1,
         "constant_vars": [
@@ -140,9 +140,9 @@ DEFAULT_cfgs = {
         "json_folder": "/home/xushuolong1/hydro/hydroevaluate/data/json",
         "yaml_folder": "/home/xushuolong1/hydro/hydroevaluate/data/yaml",
         "download": True,
-        "model_repo": "silencesoup/torchhydro-seq2seq-test",
+        "model_repo": "iHeadWater/torchhydro-seq2seq-lstm",
         "api": "",
-        "revision": "1.0.1",
+        "revision": "v1.0.1",
         "local_dir": "/home/xushuolong1/hydro/hydroevaluate/data/model_test",
         "model_type": "torchhydro",
         "model_name": "Seq2Seq",
@@ -151,7 +151,7 @@ DEFAULT_cfgs = {
             "de_input_size": 18,
             "output_size": 2,
             "hidden_size": 256,
-            "forecast_length": 8,
+            "forecast_length": 56,
             "prec_window": 1,
             "teacher_forcing_ratio": 0.5,
         },
@@ -220,6 +220,7 @@ def cmd(
     seq_first=None,
     rolling=None,
     long_seq_pred=None,
+    output_folder=None,
 ):
     """Command-line argument parser for updating configuration."""
     parser = argparse.ArgumentParser(description="Update model/data configuration.")
@@ -345,6 +346,9 @@ def cmd(
     parser.add_argument(
         "--long_seq_pred", type=bool, help="Long seq pred.", default=long_seq_pred
     )
+    parser.add_argument(
+        "--output_folder", type=str, help="Xaj Output folder.", default=output_folder
+    )
 
     # Parse command-line arguments
     args, _ = parser.parse_known_args()
@@ -449,5 +453,7 @@ def update_cfg(cfg_file, new_args):
         cfg_file["evaluation_cfgs"]["rolling"] = new_args.rolling
     if new_args.long_seq_pred:
         cfg_file["evaluation_cfgs"]["long_seq_pred"] = new_args.long_seq_pred
+    if new_args.output_folder:
+        cfg_file["evaluation_cfgs"]["output_folder"] = new_args.output_folder
 
     print("Configuration updated successfully.")
