@@ -66,10 +66,11 @@ def load_torchmodel(model_cfgs):
     pth_path = model_cfgs["pth_path"]
     device_num = model_cfgs["device"]
     device = get_the_device(device_num)
+    print("Using device:", device)
     if model_name not in pytorch_model_dict.keys():
         raise ValueError(f"Unsupported model type: {model_name}")
     model = pytorch_model_dict[model_name](**model_hyperparam)
-    model.load_state_dict(torch.load(pth_path, weights_only=True))
+    model.load_state_dict(torch.load(pth_path, map_location=device))
     model = model.to(device)
     return model
 
