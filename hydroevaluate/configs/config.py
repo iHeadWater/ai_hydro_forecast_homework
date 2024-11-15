@@ -183,6 +183,7 @@ def default_config_file():
 
 def cmd(
     data_dir=None,
+    json_folder=None,
     stat_file_path=None,
     object_ids=None,
     min_time_unit=None,
@@ -201,6 +202,7 @@ def cmd(
     relevant_rm_nan=None,
     constant_rm_nan=None,
     scaler_params=None,
+    yaml_folder=None,
     download=None,
     model_repo=None,
     api=None,
@@ -228,6 +230,9 @@ def cmd(
     # Add arguments for key configurations (只添加关键参数，其他的可以根据需要扩展)
     parser.add_argument(
         "--data_dir", type=str, help="Path to the data directory.", default=data_dir
+    )
+    parser.add_argument(
+        "--json_folder", type=str, help="Path to the json folder.", default=json_folder
     )
     parser.add_argument(
         "--stat_file_path",
@@ -294,6 +299,9 @@ def cmd(
     )
     parser.add_argument(
         "--scaler_params", type=json.loads, help="Scaler params.", default=scaler_params
+    )
+    parser.add_argument(
+        "--yaml_folder", type=str, help="Yaml folder.", default=yaml_folder
     )
     parser.add_argument(
         "--download",
@@ -371,6 +379,9 @@ def update_cfg(cfg_file, new_args):
 
     if new_args.data_dir:
         cfg_file["data_cfgs"]["data_dir"] = new_args.data_dir
+    if new_args.json_folder:
+        cfg_file["data_cfgs"]["json_folder"] = new_args.json_folder
+        cfg_file["model_cfgs"]["json_folder"] = new_args.json_folder
     if new_args.object_ids:
         cfg_file["data_cfgs"]["object_ids"] = new_args.object_ids
     if new_args.min_time_unit:
@@ -405,6 +416,8 @@ def update_cfg(cfg_file, new_args):
         cfg_file["data_cfgs"]["constant_rm_nan"] = new_args.constant_rm_nan
     if new_args.scaler_params:
         cfg_file["data_cfgs"]["scaler_params"] = new_args.scaler_params
+    if new_args.yaml_folder:
+        cfg_file["model_cfgs"]["yaml_folder"] = new_args.yaml_folder
     if new_args.download:
         cfg_file["model_cfgs"]["download"] = new_args.download
         cfg_file["model_cfgs"]["local_dir"] = new_args.local_dir
