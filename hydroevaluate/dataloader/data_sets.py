@@ -206,39 +206,22 @@ class Seq2SeqDatasetForEval(Seq2SeqDataset):
         for config in feature_mapping.values():
             time_ranges.extend(config["time_ranges"])
 
-        # 外层循环遍历时间范围
-        for start, end in time_ranges:
-            # 内层循环遍历所有变量
-            for var_name, config in feature_mapping.items():
-                category_index = self.category_to_index[
-                    config["category"]
-                ]  # 获取类别索引
+        max_time = max(
+            end
+            for feature in feature_mapping.values()
+            for _, end in feature["time_ranges"]
+        )
 
-                # 检查当前时间范围是否在变量的时间范围内
-                if any(start in range(r[0], r[1]) for r in config["time_ranges"]):
-                    feature_index = list(feature_mapping.keys()).index(
-                        var_name
-                    )  # 获取变量在x中的顺序
-                    offset = feature_mapping[var_name]["offset"]  # 获取变量的偏移量
-                    selected_data = seq_input[
-                        start + offset : end + offset, feature_index : feature_index + 1
-                    ]
+        x = np.zeros((max_time, len(self.category_to_index)))
 
-                    # 将该变量在时间范围内的数据加入结果
-                    if category_index not in result:
-                        result[category_index] = []
-                    result[category_index].append(selected_data)  # shape: (duration, 1)
+        for i, (feature, info) in enumerate(feature_mapping.items()):
+            category = info["category"]
+            time_ranges = info["time_ranges"]
+            category_index = self.category_to_index[category]
 
-        # 合并每个类别中的特征
-        for category_index in result:
-            result[category_index] = np.concatenate(
-                result[category_index], axis=0
-            )  # shape: (total_time, all_features)
+            for start, end in time_ranges:
+                x[start:end, category_index] += seq_input[start:end, i]
 
-        # 最终将不同类别的数据拼接在一起
-        x = np.concatenate(
-            list(result.values()), axis=1
-        )  # shape: (total_time, all_variables)
         c = self.c[basin, :]
         c = np.tile(c, (rho + horizon, 1))
         features_only_rho = [
@@ -251,26 +234,6 @@ class Seq2SeqDatasetForEval(Seq2SeqDataset):
         x_h = np.delete(x_h, features_only_rho, axis=1)
 
         return [
-            torch.from_numpy(x_r).float(),  # 最终输入特征，包含特定时间段的组合
-            torch.from_numpy(x_h).float(),  # 未来时间段的输出特征
-        ]
-
-    def __getitem1__(self, item: int):
-        basin, idx = self.lookup_table[item]
-        rho = self.rho
-        horizon = self.horizon
-
-        p = self.x[basin, idx + 1 : idx + rho + horizon + 1, 0].reshape(-1, 1)
-        s = self.x[basin, idx : idx + rho, 1:]
-        x = np.concatenate((p[:rho], s), axis=1)
-
-        c = self.c[basin, :]
-        c = np.tile(c, (rho + horizon, 1))
-        x = np.concatenate((x, c[:rho]), axis=1)
-
-        x_h = np.concatenate((p[rho:], c[rho:]), axis=1)
-
-        return [
-            torch.from_numpy(x).float(),
+            torch.from_numpy(x_r).float(),
             torch.from_numpy(x_h).float(),
         ]
