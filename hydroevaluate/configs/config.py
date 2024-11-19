@@ -31,7 +31,7 @@ DEFAULT_cfgs = {
     "data_cfgs": {
         "data_dir": "/ftproot/basins-interim",  # 数据位置，以HydroDataCompiler的处理结果为准
         "json_folder": "/home/xushuolong1/hydro/hydroevaluate/data/json",
-        "stat_file_path": "/home/xushuolong1/hydro/hydroevaluate/data/model/dapengscaler_stat.json",
+        "stat_file_path": "",
         # "object_ids": ["camels_01013500", "camels_01030500"],
         "object_ids": ["songliao_21401550", "songliao_21401050"],
         "min_time_unit": "h",
@@ -143,7 +143,7 @@ DEFAULT_cfgs = {
         "model_repo": "iHeadWater/torchhydro-seq2seq-lstm",
         "api": "",
         "revision": "v1.0.1",
-        "local_dir": "/home/xushuolong1/hydro/hydroevaluate/data/model_test",
+        "local_dir": "",
         "model_type": "torchhydro",
         "model_name": "Seq2Seq",
         "model_hyperparam": {
@@ -155,7 +155,7 @@ DEFAULT_cfgs = {
             "prec_window": 1,
             "teacher_forcing_ratio": 0.5,
         },
-        "pth_path": "/home/xushuolong1/hydro/hydroevaluate/data/model/best_model.pth",
+        "pth_path": "",
         "area": 1000,
         "target_unit": "m^3/s",
         "device": [0],
@@ -430,6 +430,7 @@ def update_cfg(cfg_file, new_args):
             "dapengscaler_stat.json",
         )
     elif new_args.pth_path and new_args.stat_file_path:
+        cfg_file["model_cfgs"]["download"] = False
         cfg_file["model_cfgs"]["pth_path"] = new_args.pth_path
         cfg_file["data_cfgs"]["stat_file_path"] = new_args.stat_file_path
     if new_args.model_repo:
