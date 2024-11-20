@@ -10,6 +10,7 @@ Copyright (c) 2023-2024 Wenyu Ouyang. All rights reserved.
 
 # pytest model_stream.py::test_auto_stream
 from abc import ABC, abstractmethod
+import json
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -40,6 +41,12 @@ class HydroEvaluate(ABC):
     def __init__(self, conf_file=None):
         self.cfgs = conf_file
         self._check_cfgs()
+        output_folder = self.cfgs["evaluation_cfgs"]["output_folder"]
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+        output_file = os.path.join(output_folder, "cfgs.json")
+        with open(output_file, "w") as json_file:
+            json.dump(self.cfgs, json_file, indent=4)
 
     def _check_cfgs(self):
         # TODO: simply check now, more detailed check will be added later
