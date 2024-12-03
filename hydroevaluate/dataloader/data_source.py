@@ -108,7 +108,7 @@ class CustomDataSourceForTorchHydro:
         """
         raise NotImplementedError
 
-    def read_mean_prcp(self, gage_id_lst):
+    def read_mean_prcp(self, gage_id_lst, unit):
         """
         the pre_mm_syr variable in attr
 

@@ -321,57 +321,165 @@ def gee_gpm_to_1h_data(csv_path):
     return resampled_data
 
 
-def calculate_nse(observed_csv_path, simulated_csv_path, column_name):
+def calculate_metrics(observed_file_path, simulated_file_path, var_name, metrics=None):
     """
-    calculate_nse
+    Calculate multiple metrics (NSE, RMSE, R2, KGE, FHV, FLV) between observed and simulated data.
 
     Parameters
     ----------
-    observed_csv : str
-        path of observed csv
-    simulated_csv : str
-        path of simulated csv
-    column_name : str
-        column name of csv
+    observed_file_path : str
+        Path of observed data file (CSV or NetCDF).
+    simulated_file_path : str
+        Path of simulated data file (CSV or NetCDF).
+    var_name : str
+        The name of the variable (column for CSV or variable for NetCDF).
+    metrics : list of str, optional
+        List of metrics to calculate (default is all available metrics).
 
     Returns
     -------
-    nse : float
-        NSE value
+    dict : {metric_name: metric_value}
+        Dictionary containing the calculated metrics.
 
     Raises
     ------
     ValueError
-        If either CSV file does not contain a 'time' column
+        If the file type is unsupported or the necessary columns/variables are not found.
     """
-    # read csv file
-    observed_df = pd.read_csv(observed_csv_path)
-    simulated_df = pd.read_csv(simulated_csv_path)
+    # Check if the metrics parameter is provided, else use all available metrics
+    if metrics is None:
+        metrics = ["NSE", "RMSE", "R2", "KGE", "FHV", "FLV"]
 
-    # check if both CSV files contain a 'time' column
-    if "time" in observed_df.columns and "time" in simulated_df.columns:
-        time_column = "time"
-    elif "time_start" in observed_df.columns and "time_start" in simulated_df.columns:
-        time_column = "time_start"
+    # Load the data
+    observed, simulated = load_data(observed_file_path, simulated_file_path, var_name)
+
+    # Calculate the metrics
+    results = {}
+    if "NSE" in metrics:
+        results["NSE"] = calculate_nse(observed, simulated)
+    if "RMSE" in metrics:
+        results["RMSE"] = calculate_rmse(observed, simulated)
+    if "R2" in metrics:
+        results["R2"] = calculate_r2(observed, simulated)
+    if "KGE" in metrics:
+        results["KGE"] = calculate_kge(observed, simulated)
+    if "FHV" in metrics:
+        results["FHV"] = calculate_fhv(observed, simulated)
+    if "FLV" in metrics:
+        results["FLV"] = calculate_flv(observed, simulated)
+
+    return results
+
+
+def load_data(observed_file_path, simulated_file_path, var_name):
+    """
+    Load observed and simulated data from CSV or NetCDF files.
+
+    Parameters
+    ----------
+    observed_file_path : str
+        Path to the observed data file.
+    simulated_file_path : str
+        Path to the simulated data file.
+    var_name : str
+        The name of the variable to extract.
+
+    Returns
+    -------
+    observed : numpy.ndarray
+        Observed values for the variable.
+    simulated : numpy.ndarray
+        Simulated values for the variable.
+    """
+    if observed_file_path.endswith(".csv") and simulated_file_path.endswith(".csv"):
+        observed_df = pd.read_csv(observed_file_path)
+        simulated_df = pd.read_csv(simulated_file_path)
+
+        # Merge dataframes on 'time' column
+        time_column = "time" if "time" in observed_df.columns else "time_start"
+        observed_df[time_column] = pd.to_datetime(observed_df[time_column])
+        simulated_df[time_column] = pd.to_datetime(simulated_df[time_column])
+        merged_df = pd.merge(
+            observed_df, simulated_df, on=time_column, suffixes=("_obs", "_sim")
+        )
+
+        observed = merged_df[f"{var_name}_obs"].values
+        simulated = merged_df[f"{var_name}_sim"].values
+
+    elif observed_file_path.endswith(".nc") and simulated_file_path.endswith(".nc"):
+        observed_ds = xr.open_dataset(observed_file_path)
+        simulated_ds = xr.open_dataset(simulated_file_path)
+
+        # Get variable data
+        observed = observed_ds[var_name].values
+        simulated = simulated_ds[var_name].values
+
     else:
-        raise ValueError("Both CSV files must contain a 'time' or 'time_start' column")
+        raise ValueError("Unsupported file format. Please provide CSV or NetCDF files.")
 
-    # convert 'time' column to datetime
-    observed_df[time_column] = pd.to_datetime(observed_df[time_column])
-    simulated_df[time_column] = pd.to_datetime(simulated_df[time_column])
+    return observed, simulated
 
-    # merge the two CSV files on the 'time' column
-    merged_df = pd.merge(
-        observed_df, simulated_df, on=time_column, suffixes=("_obs", "_sim")
+
+# --- Metric Calculation Functions ---
+
+
+def calculate_nse(observed, simulated):
+    """Calculate Nash-Sutcliffe Efficiency (NSE)."""
+    observed_mean = np.mean(observed)
+    numerator = np.sum((observed - simulated) ** 2)
+    denominator = np.sum((observed - observed_mean) ** 2)
+    return 1 - (numerator / denominator)
+
+
+def calculate_rmse(observed, simulated):
+    """Calculate Root Mean Square Error (RMSE)."""
+    return np.sqrt(np.mean((observed - simulated) ** 2))
+
+
+def calculate_r2(observed, simulated):
+    """Calculate R-squared (Coefficient of Determination)."""
+    ss_res = np.sum((observed - simulated) ** 2)
+    ss_tot = np.sum((observed - np.mean(observed)) ** 2)
+    return 1 - (ss_res / ss_tot)
+
+
+def calculate_kge(observed, simulated):
+    """Calculate Kling-Gupta Efficiency (KGE)."""
+    # Calculate correlation coefficient (r)
+    r = np.corrcoef(observed, simulated)[0, 1]
+
+    # Calculate bias ratio (alpha)
+    alpha = np.mean(simulated) / np.mean(observed)
+
+    # Calculate variability ratio (beta)
+    beta = np.std(simulated) / np.std(observed)
+
+    # KGE formula
+    return 1 - np.sqrt((r - 1) ** 2 + (alpha - 1) ** 2 + (beta - 1) ** 2)
+
+
+def calculate_fhv(observed, simulated):
+    """Calculate Flood Frequency Value (FHV)."""
+    # Threshold for flood (assuming 95th percentile as flood threshold)
+    threshold = np.percentile(observed, 95)
+    observed_floods = np.sum(observed >= threshold)
+    simulated_floods = np.sum(simulated >= threshold)
+
+    return simulated_floods / observed_floods if observed_floods > 0 else np.nan
+
+
+def calculate_flv(observed, simulated):
+    """Calculate Flood Level Value (FLV)."""
+    # Assuming flood level is the 95th percentile value
+    threshold = np.percentile(observed, 95)
+    observed_floods = observed[observed >= threshold]
+    simulated_floods = simulated[simulated >= threshold]
+
+    return (
+        np.mean(simulated_floods) - np.mean(observed_floods)
+        if len(observed_floods) > 0
+        else np.nan
     )
-
-    # calculate NSE
-    observed = merged_df[f"{column_name}_obs"]
-    simulated = merged_df[f"{column_name}_sim"]
-    observed_mean = observed.mean()
-    numerator = ((observed - simulated) ** 2).sum()
-    denominator = ((observed - observed_mean) ** 2).sum()
-    return 1 - (numerator / denominator)  # NSE
 
 
 def plot_time_series(observed_csv, simulated_csv, column_name):
