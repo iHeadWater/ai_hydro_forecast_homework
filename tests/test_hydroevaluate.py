@@ -36,19 +36,60 @@ def test_model_infer_with_cmd():
         "id"
     ].values.tolist()
     args = cmd(
-        # object_ids=gage_ids,
-        # t_range_test=[("2015-06-01-01", "2022-08-01-04")],
-        # download=False,
-        # pth_path="/home/xushuolong1/hydro/hydroevaluate/data/model_old/best_model.pth",
-        # stat_file_path="/home/xushuolong1/hydro/hydroevaluate/data/model_old/dapengscaler_stat.json",
+        object_ids=[
+            "songliao_21401550",
+            "songliao_21401050",
+            "camels_01013500",
+            "camels_01022500",
+        ],
+        t_range_test=[("2022-06-01-01", "2022-11-01-01")],
+        download=False,
+        pth_path="/home/xushuolong1/hydro/hydroevaluate/data/model_v101/best_model.pth",
+        stat_file_path="/home/xushuolong1/hydro/hydroevaluate/data/model_v101/dapengscaler_stat.json",
+        local_dir="/home/xushuolong1/hydro/hydroevaluate/data/model_v101",
         model_type="torchhydro",
+        device=[2],
         model_name="Seq2Seq",
+        horizon=56,
+        rho=240,
+        var_lst=["total_precipitation_hourly", "sm_surface"],
+        feature_mapping={
+            "total_precipitation_hourly": {
+                "category": "precipitation",
+                "time_ranges": [(0, 296)],
+                "offset": 1,
+            },
+            # "precipitationCal": {
+            #     "category": "precipitation",
+            #     "time_ranges": [(240, 296)],
+            #     "offset": 1,
+            # },
+            "sm_surface": {
+                "category": "soil_moisture",
+                "time_ranges": [(0, 296)],
+                "offset": 0,
+            },
+        },
+        model_hyperparam={
+            "en_input_size": 17,
+            "de_input_size": 18,
+            "output_size": 2,
+            "hidden_size": 256,
+            "forecast_length": 56,
+            "prec_window": 1,
+            "teacher_forcing_ratio": 0.5,
+        },
+        revision="v1.0.1",
+        api="7f03a609-cec7-4395-b328-7c7ec1264190",
+        output_folder="/home/xushuolong1/hydro/hydroevaluate/data/model_output",
     )
     update_cfg(cfg_file, args)
     eval_deep_hydro = EvalDeepHydro(cfg_file)
     pred = eval_deep_hydro.model_infer()
     print(pred)
-    pred.to_netcdf("/home/xushuolong1/hydro/hydroevaluate/data/model_output/pred.nc")
+    pred.to_netcdf(
+        "/home/xushuolong1/hydro/hydroevaluate/data/model_output/output_era5_all_296.nc"
+    )
 
 
 def test_model_infer():
@@ -101,10 +142,6 @@ class MockDataSource(CustomDataSourceForTorchHydro):
             time = self.generate_time(unit)
             # Creating fake data for each variable
             total_precipitation_hourly = np.random.rand(len(basin), len(time))
-            precipitationCal = np.random.rand(len(basin), len(time))
-            hourly_precipitation = np.random.rand(len(basin), len(time))
-            sm_surface = np.random.rand(len(basin), len(time))
-            sm_rootzone = np.random.rand(len(basin), len(time))
 
             ds = xr.Dataset(
                 {
@@ -112,10 +149,6 @@ class MockDataSource(CustomDataSourceForTorchHydro):
                         ("basin", "time"),
                         total_precipitation_hourly,
                     ),
-                    "precipitationCal": (("basin", "time"), precipitationCal),
-                    "hourly_precipitation": (("basin", "time"), hourly_precipitation),
-                    "sm_surface": (("basin", "time"), sm_surface),
-                    "sm_rootzone": (("basin", "time"), sm_rootzone),
                 },
                 coords={"basin": basin, "time": time},
             )
@@ -165,7 +198,7 @@ class MockDataSource(CustomDataSourceForTorchHydro):
             coords={"basin": basin},
         )
 
-    def read_mean_prcp(self, gage_id_lst):
+    def read_mean_prcp(self, gage_id_lst, unit):
         basin = ["songliao_21401050", "songliao_21401550"]
         # Creating fake data for mean precipitation
         pre_mm_syr = np.random.rand(len(basin)) * 2000
@@ -177,13 +210,71 @@ class MockDataSource(CustomDataSourceForTorchHydro):
 
 def test_model_infer_with_self_made_data():
     data_source = MockDataSource()
-    eval_deep_hydro = EvalDeepHydro(DEFAULT_cfgs, data_source)
+    cfg_file = default_config_file()
+    args = cmd(
+        rho=240,
+        horizon=56,
+        object_ids=["songliao_21401050", "songliao_21401550"],
+        t_range_test=[("2015-06-01-01", "2015-08-01-04")],
+        download=False,
+        pth_path="/home/xushuolong1/hydro/hydroevaluate/data/train_with_camels_3h_era5land_stlflow/best_model.pth",
+        stat_file_path="/home/xushuolong1/hydro/hydroevaluate/data/train_with_camels_3h_era5land_stlflow/dapengscaler_stat.json",
+        model_type="torchhydro",
+        model_name="Seq2Seq",
+        var_lst=["total_precipitation_hourly"],
+        target_cols=["streamflow"],
+        feature_mapping={
+            "total_precipitation_hourly": {
+                "category": "precipitation",
+                "time_ranges": [(0, 296)],
+                "offset": 1,
+            },
+        },
+        model_hyperparam={
+            "en_input_size": 16,
+            "de_input_size": 17,
+            "output_size": 1,
+            "hidden_size": 256,
+            "forecast_length": 56,
+            "prec_window": 1,
+            "teacher_forcing_ratio": 0.5,
+        },
+    )
+    update_cfg(cfg_file, args)
+    eval_deep_hydro = EvalDeepHydro(cfg_file, data_source)
     pred = eval_deep_hydro.model_infer()
     print(pred)
 
 
 def test_hydromodel_infer():
-    args = cmd(model_type="hydromodel")
+    args = cmd(
+        model_type="hydromodel",
+        object_ids=["songliao_21401550", "songliao_21401050"],
+        var_lst=[
+            "total_precipitation_hourly",
+            "hourly_precipitation",
+            "sm_surface",
+            "streamflow",
+        ],
+        t_range_test=[("2016-06-03-01", "2023-11-03-04")],
+        feature_mapping={
+            "total_precipitation_hourly": {
+                "category": "precipitation",
+                "time_ranges": [(0, 240)],
+                "offset": 1,
+            },
+            "hourly_precipitation": {
+                "category": "precipitation",
+                "time_ranges": [(240, 248)],
+                "offset": 1,
+            },
+            "sm_surface": {
+                "category": "soil_moisture",
+                "time_ranges": [(0, 248)],
+                "offset": 0,
+            },
+        },
+    )
     cfg_file = default_config_file()
     update_cfg(cfg_file, args)
     eval_hydro_model = EvalHydroModel(cfg_file)
