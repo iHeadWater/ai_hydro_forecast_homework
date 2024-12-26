@@ -237,3 +237,38 @@ class Seq2SeqDatasetForEval(Seq2SeqDataset):
             torch.from_numpy(x_r).float(),
             torch.from_numpy(x_h).float(),
         ]
+
+
+class SeqForecastDatasetForEval(Seq2SeqDatasetForEval):
+    def __getitem__(self, item: int):
+        basin, time = self.lookup_table[item]
+        rho = self.rho  # forecast history
+        horizon = self.horizon  # forecast length
+        # p cover all encoder-decoder periods; +1 means the period while +0 means start of the current period
+        p = self.x[basin, time : time + rho + horizon, 0].reshape(-1, 1)
+        # se only cover encoder periods
+        se = self.x[basin, time : time + rho, 1:]
+        # se only cover decoder periods
+        sd = self.x[basin, time + rho : time + rho + horizon, 1:]
+        # encoder dynamic features
+        xe = np.concatenate((p[:rho], se), axis=1)
+        # encoder static features
+        if self.c is None or self.c.shape[-1] == 0:
+            xec = xe
+        else:
+            c = self.c[basin, :]
+            # c = np.tile(c, (rho + horizon, 1))
+            # xec = c[:rho]
+            xec = c
+        # xh cover decoder periods
+        xd = np.concatenate((p[rho:], sd), axis=1)
+        # decoder static features
+        xec = c
+        xdc = c
+
+        return [
+            torch.from_numpy(xe).float(),
+            torch.from_numpy(xec).float(),
+            torch.from_numpy(xd).float(),
+            torch.from_numpy(xdc).float(),
+        ]

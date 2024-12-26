@@ -25,7 +25,7 @@ from functools import reduce
 from yaml import Loader, Dumper
 from modelscope import HubApi
 from modelscope import snapshot_download
-from hydroevaluate.dataloader.data_sets import Seq2SeqDatasetForEval
+from hydroevaluate.dataloader.dataloader_dict import dataset_dict
 from hydroevaluate.dataloader.data_source import StandardDataSourceForHydroModel
 from torchhydro.trainers.train_utils import (
     calculate_and_record_metrics,
@@ -77,7 +77,9 @@ class EvalDeepHydro(HydroEvaluate):
             self._download_model()
         self.modelloader = ModelLoader(self.cfgs["model_cfgs"])
         self.data_source = data_source
-        self.data_set = Seq2SeqDatasetForEval(self.cfgs["data_cfgs"], self.data_source)
+        self.data_set = dataset_dict[self.cfgs["data_cfgs"]["dataset"]](
+            self.cfgs["data_cfgs"], self.data_source
+        )
         self.dataloader = DataLoader(
             self.data_set,
             batch_size=int(self.data_set.num_samples / self.n_grid),

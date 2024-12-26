@@ -37,6 +37,7 @@ DEFAULT_cfgs = {
         "min_time_unit": "h",
         "min_time_interval": 3,
         "t_range_test": [("2019-06-01-01", "2019-10-01-01")],
+        "dataset": "Seq2SeqDatasetForEval",
         "var_lst": [
             "total_precipitation_hourly",
             # "precipitationCal",
@@ -189,6 +190,7 @@ def cmd(
     min_time_unit=None,
     min_time_interval=None,
     t_range_test=None,
+    dataset=None,
     var_lst=None,
     var_self_orgnized=None,
     feature_mapping=None,
@@ -258,6 +260,7 @@ def cmd(
     parser.add_argument(
         "--t_range_test", type=list, help="Test time range.", default=t_range_test
     )
+    parser.add_argument("--dataset", type=str, help="Dataset.", default=dataset)
     parser.add_argument("--var_lst", type=list, help="Variable list.", default=var_lst)
     parser.add_argument(
         "--var_self_orgnized",
@@ -390,6 +393,8 @@ def update_cfg(cfg_file, new_args):
         cfg_file["data_cfgs"]["min_time_interval"] = new_args.min_time_interval
     if new_args.t_range_test:
         cfg_file["data_cfgs"]["t_range_test"] = new_args.t_range_test
+    if new_args.dataset:
+        cfg_file["data_cfgs"]["dataset"] = new_args.dataset
     if new_args.var_lst:
         cfg_file["data_cfgs"]["var_lst"] = new_args.var_lst
     if new_args.var_self_orgnized:
@@ -406,7 +411,7 @@ def update_cfg(cfg_file, new_args):
         cfg_file["data_cfgs"]["horizon"] = new_args.horizon
     if new_args.warmup_length:
         cfg_file["data_cfgs"]["warmup_length"] = new_args.warmup_length
-    if new_args.prec_window:
+    if new_args.prec_window is not None:
         cfg_file["data_cfgs"]["prec_window"] = new_args.prec_window
     if new_args.constant_vars:
         cfg_file["data_cfgs"]["constant_vars"] = new_args.constant_vars
