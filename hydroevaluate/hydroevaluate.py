@@ -1,7 +1,7 @@
 """
 Author: Wenyu Ouyang
 Date: 2024-05-30 09:11:04
-LastEditTime: 2024-06-03 15:20:23
+LastEditTime: 2024-12-29 16:20:16
 LastEditors: Wenyu Ouyang
 Description: main function for hydroevaluate
 FilePath: \hydroevaluate\hydroevaluate\hydroevaluate.py
@@ -31,7 +31,6 @@ from torchhydro.trainers.train_utils import (
     calculate_and_record_metrics,
 )
 
-from hydroevaluate import SETTING
 from hydroevaluate.modelloader.model_loader import ModelLoader
 from hydroevaluate.configs.config import DEFAULT_cfgs
 from torchhydro.models.model_utils import get_the_device

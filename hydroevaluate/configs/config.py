@@ -1,9 +1,9 @@
 """
 Author: silencesoup silencesoup@outlook.com
 Date: 2024-09-03 10:16:32
-LastEditors: silencesoup silencesoup@outlook.com
-LastEditTime: 2024-09-04 11:01:45
-FilePath: /hydroevaluate/hydroevaluate/cfgss/cfgs.py
+LastEditors: Wenyu Ouyang
+LastEditTime: 2024-12-29 16:27:38
+FilePath: \hydroevaluate\hydroevaluate\configs\config.py
 Description:
 """
 
@@ -29,7 +29,9 @@ DATE_FORMATS = ["%Y-%m-%d-%H", "%Y-%m-%d"]
 
 DEFAULT_cfgs = {
     "data_cfgs": {
-        "data_dir": "/ftproot/basins-interim",  # 数据位置，以HydroDataCompiler的处理结果为准
+        # 数据位置，以HydroDataCompiler的处理结果为准
+        "data_dir": "/ftproot/basins-interim",
+        # TODO: this json folder is for hydromodel, should be renamed
         "json_folder": "/home/xushuolong1/hydro/hydroevaluate/data/json",
         "stat_file_path": "",
         # "object_ids": ["camels_01013500", "camels_01030500"],
@@ -138,12 +140,17 @@ DEFAULT_cfgs = {
         },
     },
     "model_cfgs": {
+        # TODO: this json folder is for hydromodel, should be renamed
         "json_folder": "/home/xushuolong1/hydro/hydroevaluate/data/json",
+        # TODO: this yaml is for hydromodel's param_range_dict, should be renamed
         "yaml_folder": "/home/xushuolong1/hydro/hydroevaluate/data/yaml",
+        # if true, torchhydro's trained weight will be downloaded from modelscope
         "download": True,
         "model_repo": "iHeadWater/torchhydro-seq2seq-lstm",
+        # use your own api
         "api": "",
         "revision": "v1.0.1",
+        # your directory where you want to put your evaluation results
         "local_dir": "",
         "model_type": "torchhydro",
         "model_name": "Seq2Seq",
@@ -156,12 +163,14 @@ DEFAULT_cfgs = {
             "prec_window": 1,
             "teacher_forcing_ratio": 0.5,
         },
+        # local weight path
         "pth_path": "",
         "area": 1000,
         "target_unit": "m^3/s",
         "device": [0],
     },
     "evaluation_cfgs": {
+        # your directory where you want to put your evaluation results
         "output_folder": "/home/xushuolong1/hydro/hydroevaluate/data/output",
         "seq_first": False,
         "rolling": True,
