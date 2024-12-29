@@ -117,9 +117,8 @@ class EvalDeepHydro(HydroEvaluate):
                 test_preds.append(pred.cpu().numpy())
             pred = reduce(lambda x, y: np.vstack((x, y)), test_preds)
         ngrid = self.n_grid
-        if eval_cfgs["rolling"]:
-            # TODO: now we only guarantee each time has only one value,
-            # so we directly reshape the data rather than a real rolling
+        if eval_cfgs["rolling"] == data_cfgs["horizon"]:
+            # TODO: not we only support each time has one prediction
             nt = self.data_set.nt
             target_len = len(data_cfgs["target_cols"])
             prec_window = data_cfgs["prec_window"]
@@ -135,6 +134,8 @@ class EvalDeepHydro(HydroEvaluate):
                 for j in range(recover_len - window_size + 1):
                     pred_[i, j : j + window_size, :] = pred_4d[i, j, :, :]
             pred = pred_.reshape(ngrid, recover_len, target_len)
+        else:
+            raise NotImplementedError("Rolling window not implemented")
         pred = self.data_set.denormalize(pred)
         return pred
 

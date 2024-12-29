@@ -4,7 +4,7 @@ Date: 2024-09-03 10:16:32
 LastEditors: Wenyu Ouyang
 LastEditTime: 2024-12-29 16:27:38
 FilePath: \hydroevaluate\hydroevaluate\configs\config.py
-Description:
+Description: configuration
 """
 
 import argparse
@@ -49,6 +49,7 @@ DEFAULT_cfgs = {
             # "sm_rootzone",
         ],
         "var_self_orgnized": True,
+        # NOTE: the name and order of vars in feature_mapping must be same as var_lst
         "feature_mapping": {
             "total_precipitation_hourly": {
                 "category": "precipitation",
@@ -173,7 +174,11 @@ DEFAULT_cfgs = {
         # your directory where you want to put your evaluation results
         "output_folder": "/home/xushuolong1/hydro/hydroevaluate/data/output",
         "seq_first": False,
-        "rolling": True,
+        # rolling is 0 means decoder-only model's prediction -- each period has one prediction
+        # when rolling>0, such as 1, means perform forecasting each step after 1 period.
+        # For example, at 8:00am we perform one forecasting and our time-step is 3h, 
+        # rolling=1 means 11:00, 14:00, 17:00 ..., we will perform forecasting
+        "rolling": 56,
         "long_seq_pred": False,
     },
 }
@@ -362,7 +367,7 @@ def cmd(
     )
     parser.add_argument("--device", type=str, help="Device.", default=device)
     parser.add_argument("--seq_first", type=bool, help="Seq first.", default=seq_first)
-    parser.add_argument("--rolling", type=bool, help="Rolling.", default=rolling)
+    parser.add_argument("--rolling", type=int, help="Rolling.", default=rolling)
     parser.add_argument(
         "--long_seq_pred", type=bool, help="Long seq pred.", default=long_seq_pred
     )
