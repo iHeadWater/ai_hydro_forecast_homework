@@ -84,7 +84,7 @@ def test_model_infer_with_cmd():
             "teacher_forcing_ratio": 0.5,
         },
         revision="v1.0.1",
-        api="7f03a609-cec7-4395-b328-7c7ec1264190",
+        api="",
     )
     update_cfg(cfg_file, args)
     eval_deep_hydro = EvalDeepHydro(cfg_file)
