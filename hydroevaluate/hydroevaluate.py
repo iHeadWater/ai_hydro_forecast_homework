@@ -118,7 +118,7 @@ class EvalDeepHydro(HydroEvaluate):
             pred = reduce(lambda x, y: np.vstack((x, y)), test_preds)
         ngrid = self.n_grid
         if eval_cfgs["rolling"] > 0:
-            if eval_cfgs != data_cfgs["horizon"]:
+            if eval_cfgs["rolling"] != data_cfgs["horizon"]:
                 raise NotImplementedError("Rolling window not implemented")
             # TODO: not we only support each time has one prediction
             nt = self.data_set.nt
