@@ -32,31 +32,35 @@ def test_load_config():
 
 def test_model_infer_with_cmd():
     cfg_file = default_config_file()
-    gage_ids = pd.read_csv("data/basin_id(819).csv", dtype={"id": str})[
-        "id"
-    ].values.tolist()
+    # gage_ids = pd.read_csv("data/basin_id(819).csv", dtype={"id": str})[
+    #     "id"
+    # ].values.tolist()
     args = cmd(
+        data_dir=r"C:\data\data_817",
         object_ids=[
             "songliao_21401550",
             "songliao_21401050",
             "camels_01013500",
             "camels_01022500",
         ],
-        t_range_test=[("2022-06-01-01", "2022-11-01-01")],
-        download=False,
-        pth_path="/home/xushuolong1/hydro/hydroevaluate/data/model_v101/best_model.pth",
-        stat_file_path="/home/xushuolong1/hydro/hydroevaluate/data/model_v101/dapengscaler_stat.json",
-        local_dir="/home/xushuolong1/hydro/hydroevaluate/data/model_v101",
+        t_range_test=[("2021-06-01-01", "2021-11-01-01")],
+        download=True,
+        # pth_path="/home/xushuolong1/hydro/hydroevaluate/data/model_v101/best_model.pth",
+        # stat_file_path="/home/xushuolong1/hydro/hydroevaluate/data/model_v101/dapengscaler_stat.json",
+        local_dir=r"C:\Programming\hydro\hydroevaluate\data\model",
         model_type="torchhydro",
-        device=[2],
+        device=[-1],
         model_name="Seq2Seq",
-        horizon=56,
+        horizon=8,
+        rolling=8,
         rho=240,
+        min_time_interval=3,
+        min_time_unit="h",
         var_lst=["total_precipitation_hourly", "sm_surface"],
         feature_mapping={
             "total_precipitation_hourly": {
                 "category": "precipitation",
-                "time_ranges": [(0, 296)],
+                "time_ranges": [(0, 248)],
                 "offset": 1,
             },
             # "precipitationCal": {
@@ -66,7 +70,7 @@ def test_model_infer_with_cmd():
             # },
             "sm_surface": {
                 "category": "soil_moisture",
-                "time_ranges": [(0, 296)],
+                "time_ranges": [(0, 248)],
                 "offset": 0,
             },
         },
@@ -75,21 +79,18 @@ def test_model_infer_with_cmd():
             "de_input_size": 18,
             "output_size": 2,
             "hidden_size": 256,
-            "forecast_length": 56,
+            "forecast_length": 8,
             "prec_window": 1,
             "teacher_forcing_ratio": 0.5,
         },
         revision="v1.0.1",
         api="7f03a609-cec7-4395-b328-7c7ec1264190",
-        output_folder="/home/xushuolong1/hydro/hydroevaluate/data/model_output",
     )
     update_cfg(cfg_file, args)
     eval_deep_hydro = EvalDeepHydro(cfg_file)
     pred = eval_deep_hydro.model_infer()
     print(pred)
-    pred.to_netcdf(
-        "/home/xushuolong1/hydro/hydroevaluate/data/model_output/output_era5_all_296.nc"
-    )
+    pred.to_netcdf(r"C:\Programming\hydro\hydroevaluate\result\test_21\test.nc")
 
 
 def test_model_infer():
@@ -129,7 +130,7 @@ class MockDataSource(CustomDataSourceForTorchHydro):
             pd.DatetimeIndex: Generated time range.
         """
         start_time = pd.Timestamp("2015-06-01 01:00:00")
-        end_time = pd.Timestamp("2015-08-01 04:00:00")
+        end_time = pd.Timestamp("2015-10-01 04:00:00")
         return pd.date_range(start=start_time, end=end_time, freq=time_unit)
 
     def read_ts_xrdataset(self, gage_id_lst, t_range, var_lst, time_units):
@@ -215,7 +216,7 @@ def test_model_infer_with_self_made_data():
         rho=240,
         horizon=56,
         object_ids=["songliao_21401050", "songliao_21401550"],
-        t_range_test=[("2015-06-01-01", "2015-08-01-04")],
+        t_range_test=[("2015-06-01-01", "2015-10-01-04")],
         download=False,
         pth_path="/home/xushuolong1/hydro/hydroevaluate/data/train_with_camels_3h_era5land_stlflow/best_model.pth",
         stat_file_path="/home/xushuolong1/hydro/hydroevaluate/data/train_with_camels_3h_era5land_stlflow/dapengscaler_stat.json",
