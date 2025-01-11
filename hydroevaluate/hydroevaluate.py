@@ -1,7 +1,7 @@
 """
-Author: Wenyu Ouyang
+Author: Shuolong Xu
 Date: 2024-05-30 09:11:04
-LastEditTime: 2024-12-29 16:20:16
+LastEditTime: 2025-01-11 20:59:16
 LastEditors: Wenyu Ouyang
 Description: main function for hydroevaluate
 FilePath: \hydroevaluate\hydroevaluate\hydroevaluate.py
@@ -25,15 +25,13 @@ from functools import reduce
 from yaml import Loader, Dumper
 from modelscope import HubApi
 from modelscope import snapshot_download
-from hydroevaluate.dataloader.dataloader_dict import dataset_dict
-from hydroevaluate.dataloader.data_source import StandardDataSourceForHydroModel
 from torchhydro.trainers.train_utils import (
     calculate_and_record_metrics,
 )
-
+from torchhydro.models.model_utils import get_the_device
+from torchhydro.datasets.data_dict import datasets_dict
 from hydroevaluate.modelloader.model_loader import ModelLoader
 from hydroevaluate.configs.config import DEFAULT_cfgs
-from torchhydro.models.model_utils import get_the_device
 
 
 class HydroEvaluate(ABC):
@@ -76,9 +74,10 @@ class EvalDeepHydro(HydroEvaluate):
             self._download_model()
         self.modelloader = ModelLoader(self.cfgs["model_cfgs"])
         self.data_source = data_source
-        self.data_set = dataset_dict[self.cfgs["data_cfgs"]["dataset"]](
-            self.cfgs["data_cfgs"], self.data_source
+        self.data_set = datasets_dict[self.cfgs["data_cfgs"]["dataset"]](
+            self.cfgs["data_cfgs"], "test"
         )
+        # cache historical data to tensor pth file
         self.dataloader = DataLoader(
             self.data_set,
             batch_size=int(self.data_set.num_samples / self.n_grid),

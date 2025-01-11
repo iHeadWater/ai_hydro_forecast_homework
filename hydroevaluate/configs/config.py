@@ -2,7 +2,7 @@
 Author: silencesoup silencesoup@outlook.com
 Date: 2024-09-03 10:16:32
 LastEditors: Wenyu Ouyang
-LastEditTime: 2024-12-29 16:27:38
+LastEditTime: 2025-01-11 16:16:50
 FilePath: \hydroevaluate\hydroevaluate\configs\config.py
 Description: configuration
 """
@@ -153,6 +153,7 @@ DEFAULT_cfgs = {
         "revision": "v1.0.1",
         # your directory where you want to put your evaluation results
         "local_dir": "",
+        # torchhydro or hydromodel
         "model_type": "torchhydro",
         "model_name": "Seq2Seq",
         "model_hyperparam": {
@@ -176,7 +177,7 @@ DEFAULT_cfgs = {
         "seq_first": False,
         # rolling is 0 means decoder-only model's prediction -- each period has one prediction
         # when rolling>0, such as 1, means perform forecasting each step after 1 period.
-        # For example, at 8:00am we perform one forecasting and our time-step is 3h, 
+        # For example, at 8:00am we perform one forecasting and our time-step is 3h,
         # rolling=1 means 11:00, 14:00, 17:00 ..., we will perform forecasting
         "rolling": 56,
         "long_seq_pred": False,
@@ -394,50 +395,50 @@ def update_cfg(cfg_file, new_args):
     """
     print("Updating configuration file...")
 
-    if new_args.data_dir:
+    if new_args.data_dir is not None:
         cfg_file["data_cfgs"]["data_dir"] = new_args.data_dir
-    if new_args.json_folder:
+    if new_args.json_folder is not None:
         cfg_file["data_cfgs"]["json_folder"] = new_args.json_folder
         cfg_file["model_cfgs"]["json_folder"] = new_args.json_folder
-    if new_args.object_ids:
+    if new_args.object_ids is not None:
         cfg_file["data_cfgs"]["object_ids"] = new_args.object_ids
-    if new_args.min_time_unit:
+    if new_args.min_time_unit is not None:
         cfg_file["data_cfgs"]["min_time_unit"] = new_args.min_time_unit
-    if new_args.min_time_interval:
+    if new_args.min_time_interval is not None:
         cfg_file["data_cfgs"]["min_time_interval"] = new_args.min_time_interval
-    if new_args.t_range_test:
+    if new_args.t_range_test is not None:
         cfg_file["data_cfgs"]["t_range_test"] = new_args.t_range_test
-    if new_args.dataset:
+    if new_args.dataset is not None:
         cfg_file["data_cfgs"]["dataset"] = new_args.dataset
-    if new_args.var_lst:
+    if new_args.var_lst is not None:
         cfg_file["data_cfgs"]["var_lst"] = new_args.var_lst
-    if new_args.var_self_orgnized:
+    if new_args.var_self_orgnized is not None:
         cfg_file["data_cfgs"]["var_self_orgnized"] = new_args.var_self_orgnized
-    if new_args.feature_mapping:
+    if new_args.feature_mapping is not None:
         cfg_file["data_cfgs"]["feature_mapping"] = new_args.feature_mapping
-    if new_args.features_only_rho:
+    if new_args.features_only_rho is not None:
         cfg_file["data_cfgs"]["features_only_rho"] = new_args.features_only_rho
-    if new_args.target_cols:
+    if new_args.target_cols is not None:
         cfg_file["data_cfgs"]["target_cols"] = new_args.target_cols
-    if new_args.rho:
+    if new_args.rho is not None:
         cfg_file["data_cfgs"]["rho"] = new_args.rho
-    if new_args.horizon:
+    if new_args.horizon is not None:
         cfg_file["data_cfgs"]["horizon"] = new_args.horizon
-    if new_args.warmup_length:
+    if new_args.warmup_length is not None:
         cfg_file["data_cfgs"]["warmup_length"] = new_args.warmup_length
     if new_args.prec_window is not None:
         cfg_file["data_cfgs"]["prec_window"] = new_args.prec_window
-    if new_args.constant_vars:
+    if new_args.constant_vars is not None:
         cfg_file["data_cfgs"]["constant_vars"] = new_args.constant_vars
-    if new_args.relevant_rm_nan:
+    if new_args.relevant_rm_nan is not None:
         cfg_file["data_cfgs"]["relevant_rm_nan"] = new_args.relevant_rm_nan
-    if new_args.constant_rm_nan:
+    if new_args.constant_rm_nan is not None:
         cfg_file["data_cfgs"]["constant_rm_nan"] = new_args.constant_rm_nan
-    if new_args.scaler_params:
+    if new_args.scaler_params is not None:
         cfg_file["data_cfgs"]["scaler_params"] = new_args.scaler_params
-    if new_args.yaml_folder:
+    if new_args.yaml_folder is not None:
         cfg_file["model_cfgs"]["yaml_folder"] = new_args.yaml_folder
-    if new_args.download:
+    if new_args.download is not None:
         cfg_file["model_cfgs"]["download"] = new_args.download
         cfg_file["model_cfgs"]["local_dir"] = new_args.local_dir
         cfg_file["model_cfgs"]["pth_path"] = os.path.join(
@@ -448,45 +449,45 @@ def update_cfg(cfg_file, new_args):
             cfg_file["model_cfgs"]["local_dir"],
             "dapengscaler_stat.json",
         )
-    elif new_args.pth_path and new_args.stat_file_path:
+    elif new_args.pth_path is not None and new_args.stat_file_path is not None:
         cfg_file["model_cfgs"]["download"] = False
         cfg_file["model_cfgs"]["pth_path"] = new_args.pth_path
         cfg_file["data_cfgs"]["stat_file_path"] = new_args.stat_file_path
-    if new_args.model_repo:
+    if new_args.model_repo is not None:
         cfg_file["model_cfgs"]["model_repo"] = new_args.model_repo
-    if new_args.api:
+    if new_args.api is not None:
         cfg_file["model_cfgs"]["api"] = new_args.api
-    if new_args.revision:
+    if new_args.revision is not None:
         cfg_file["model_cfgs"]["revision"] = new_args.revision
-    if new_args.model_type:
+    if new_args.model_type is not None:
         cfg_file["model_cfgs"]["model_type"] = new_args.model_type
-    if new_args.model_name:
+    if new_args.model_name is not None:
         cfg_file["model_cfgs"]["model_name"] = new_args.model_name
-    if new_args.model_hyperparam:
+    if new_args.model_hyperparam is not None:
         cfg_file["model_cfgs"]["model_hyperparam"] = new_args.model_hyperparam
-    if new_args.p_and_e:
+    if new_args.p_and_e is not None:
         cfg_file["model_cfgs"]["p_and_e"] = new_args.p_and_e
-    if new_args.area:
+    if new_args.area is not None:
         cfg_file["model_cfgs"]["area"] = new_args.area
-    if new_args.calibrated_norm_param_file:
+    if new_args.calibrated_norm_param_file is not None:
         cfg_file["model_cfgs"][
             "calibrated_norm_param_file"
         ] = new_args.calibrated_norm_param_file
-    if new_args.param_range_file:
+    if new_args.param_range_file is not None:
         cfg_file["model_cfgs"]["param_range_file"] = new_args.param_range_file
-    if new_args.model_info_file:
+    if new_args.model_info_file is not None:
         cfg_file["model_cfgs"]["model_info_file"] = new_args.model_info_file
-    if new_args.target_unit:
+    if new_args.target_unit is not None:
         cfg_file["model_cfgs"]["target_unit"] = new_args.target_unit
-    if new_args.device:
+    if new_args.device is not None:
         cfg_file["model_cfgs"]["device"] = new_args.device
-    if new_args.seq_first:
+    if new_args.seq_first is not None:
         cfg_file["evaluation_cfgs"]["seq_first"] = new_args.seq_first
-    if new_args.rolling:
+    if new_args.rolling is not None:
         cfg_file["evaluation_cfgs"]["rolling"] = new_args.rolling
-    if new_args.long_seq_pred:
+    if new_args.long_seq_pred is not None:
         cfg_file["evaluation_cfgs"]["long_seq_pred"] = new_args.long_seq_pred
-    if new_args.output_folder:
+    if new_args.output_folder is not None:
         cfg_file["evaluation_cfgs"]["output_folder"] = new_args.output_folder
 
     print("Configuration updated successfully.")

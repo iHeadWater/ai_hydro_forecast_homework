@@ -8,119 +8,39 @@ FilePath: \hydroevaluate\hydroevaluate\dataloader\common.py
 Copyright (c) 2023-2024 Wenyu Ouyang. All rights reserved.
 """
 
-from abc import ABC
-
 import logging
+
+import numpy as np
 
 logging.getLogger().setLevel(logging.INFO)
 
 
-class EvalDataSource(ABC):
-    def __init__(self, name, var_lst):
-        self.name = name
-        self.var_lst = var_lst
+def concat_x(x, basin, idx, feature_mapping):
+    unique_categories = []
+    for config in feature_mapping.values():
+        if config["category"] not in unique_categories:
+            unique_categories.append(config["category"])
+    category_to_index = {
+        category: idx for idx, category in enumerate(unique_categories)
+    }
+    seq_input = x[basin, idx:, :]  # shape: (seq_length, feature)
 
-    def load_ts_basin_mean(self, basin_lst: list, t_range_test: list, vars: list):
-        if not isinstance(vars, list):
-            vars = [vars]
-        if any(var not in self.var_lst for var in vars):
-            raise ValueError("Variable not supported")
-        ds_lst = [[]]
-        for var_ in vars:
-            da_lst = []
-            for basin_id in basin_lst:
-                data = self.basin_mean_process(basin_id, t_range_test, var_)
-                da_lst.append(data)
-            ds_lst.append(da_lst)
-        # TODO: this should be trans to a xr.Dataset
-        return ds_lst
+    # 动态生成时间范围
+    time_ranges = []
+    for config in feature_mapping.values():
+        time_ranges.extend(config["time_ranges"])
 
-    def basin_mean_process(self, basin_id, start_time, var, tolerance=0.005):
-        """Read basin-range grid data and calculate the basin mean
-        TODO: now only support single basin processing
+    max_time = max(
+        end for feature in feature_mapping.values() for _, end in feature["time_ranges"]
+    )
 
-        Parameters
-        ----------
-        basin_id : str
-            basin id
-        start_time: pd.Timestamp
-            the start time for the data
-        var: str
-            the variable name
-        tolerance : float, optional
-            the tolerance for the intersection ratio, by default 0.005
+    x = np.zeros((max_time, len(category_to_index)))
 
-        Raises
-        ------
-        NotImplementedError
-            _description_
+    for i, (feature, info) in enumerate(feature_mapping.items()):
+        category = info["category"]
+        time_ranges = info["time_ranges"]
+        category_index = category_to_index[category]
 
-        Returns
-        -------
-        xr.DataArray
-            basin mean data
-        """
-        raise NotImplementedError
-
-
-class GPM(EvalDataSource):
-    def __init__(self, var_lst):
-        super().__init__("GPM", var_lst)
-
-    def basin_mean_process(self, basin_id, t_range_test, var, tolerance=0.005):
-        if var == "gpm_tp":
-            return process_gpm_data(t_range_test, basin_id, tolerance)
-        else:
-            raise ValueError("Variable not supported")
-
-
-class GFS(EvalDataSource):
-    def __init__(self, var_lst):
-        super().__init__("GFS", var_lst)
-
-    def basin_mean_process(self, basin_id, t_range_test, var, tolerance=0.005):
-        if var == "gfs_tp":
-            return process_gfs_tp(t_range_test, basin_id, tolerance)
-        elif var == "gfs_soilw":
-            return process_gfs_soil(t_range_test, basin_id)
-        elif var in ["d2m", "t2m", "dswrf"]:
-            # TODO: this should be more efficient
-            data_ = process_gfs_other_forcing(t_range_test[0], basin_id, tolerance)
-            return data_.sel(variable=var)
-        else:
-            raise ValueError("Variable not supported")
-
-
-class SMAP(EvalDataSource):
-    def __init__(self, var_lst):
-        super().__init__("smap_sm_surface", var_lst)
-
-    def basin_mean_process(self, basin_id, t_range_test, var, tolerance=0.005):
-        if var == "smap_sm_surface":
-            return process_smap_sm_surface(t_range_test, basin_id)
-        else:
-            raise ValueError("Variable not supported")
-
-
-class MultiSource:
-    def __init__(self, var_lst, impute_setting):
-        """_summary_
-
-        Parameters
-        ----------
-        merge_type : _type_
-            impute means fill the missing value with the other source and the observation is the main source
-        var_lst : _type_
-            _description_
-        """
-        self._check_source(var_lst)
-        # TODO:
-        self._obs_read(var_lst, basin_id_lst, t_range_test)
-        self._pred_read(var_lst, basin_id_lst, t_range_test)
-        self._merge()
-        self._aggregate()
-
-    def _check_source(self, var_lst):
-        for var in var_lst:
-            if var not in ["tp", "soilw", "d2m", "t2m", "dswrf", "sm_surface"]:
-                raise ValueError("Variable not supported")
+        for start, end in time_ranges:
+            x[start:end, category_index] += seq_input[start:end, i]
+    return x
