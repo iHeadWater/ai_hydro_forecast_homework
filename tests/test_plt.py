@@ -20,7 +20,11 @@ def test_plt_by_nc():
             "camels_01022500",
         ],
         basin_info_csv=r"C:\Programming\hydro\hydroevaluate\data\basin_info.csv",
+        basin_column="basin",
+        precip_var="total_precipitation_hourly",
+        pred_colunm="streamflow",
         time_unit="3h",
         project_name="test_21",
         time_range=["2021-06-01-01", "2021-11-01-01"],
+        trans_unit=False,
     )
