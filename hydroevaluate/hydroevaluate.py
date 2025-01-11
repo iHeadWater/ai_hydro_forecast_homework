@@ -133,7 +133,7 @@ class EvalDeepHydro(HydroEvaluate):
             # recover pred to pred_ and obs to obs_
             pred_4d = pred.reshape(ngrid, samples, window_size, target_len)
             for i in range(ngrid):
-                for j in range(recover_len - window_size + 1):
+                for j in range(0, recover_len - window_size + 1, window_size):
                     pred_[i, j : j + window_size, :] = pred_4d[i, j, :, :]
             pred = pred_.reshape(ngrid, recover_len, target_len)
         pred = self.data_set.denormalize(pred)
