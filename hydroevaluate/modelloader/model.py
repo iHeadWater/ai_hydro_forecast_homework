@@ -1,7 +1,7 @@
 """
 Author: Wenyu Ouyang
 Date: 2024-05-30 09:11:04
-LastEditTime: 2025-01-12 11:23:45
+LastEditTime: 2025-01-12 18:48:05
 LastEditors: Wenyu Ouyang
 Description: Load hydromodel
 FilePath: \hydroevaluate\hydroevaluate\modelloader\model.py
@@ -9,13 +9,16 @@ Copyright (c) 2023-2024 Wenyu Ouyang. All rights reserved.
 """
 
 import json
+import os
 import pint  # noqa
 import torch
 import pandas as pd
 from hydromodel.models.model_dict import MODEL_DICT
+from hydromodel.models.model_config import read_model_param_dict
 from torchhydro.models.model_dict_function import pytorch_model_dict
 from torchhydro.models.model_utils import get_the_device
 from torchhydro.trainers import train_utils
+import yaml
 
 ALL_MODELS_DICT = {**MODEL_DICT, **pytorch_model_dict}
 
@@ -24,37 +27,67 @@ def load_hydromodel(model_cfgs, **kwargs):
     """
     Directly load the calibrated model with the given parameters
     one-time call for only one basin now
+
+    Return
+    ----------
+    model : dict
+        model information
     """
     gage_id = kwargs.get("gage_id", None)
-    calibrated_norm_param_file = model_cfgs["json_folder"] + "/" + gage_id + ".json"
-    param_range_file = model_cfgs["yaml_folder"] + "/" + gage_id + ".yaml"
-    model = {
-        "calibrated_norm_param_file": calibrated_norm_param_file,
-        "param_range_file": param_range_file,
-        "target_unit": None,
-        "model_info_file": None,
-    }
-    model_json = json.load(open(calibrated_norm_param_file, "r"))
-    # check parameters
-    model["target_unit"] = (
-        "m^3/s" if model["target_unit"] is None else model["target_unit"]
-    )
-    if model["model_info_file"] is None:
-        model["model_info"] = {
-            "name": "xaj",
-            "source_book": "HF",
-            "source_type": "sources5mm",
-            "time_interval_hours": 3,
+    if model_cfgs["model_online"]:
+        calibrated_norm_param_file = (
+            model_cfgs["hydromodel_json_dir"] + "/" + gage_id + ".json"
+        )
+        param_range_file = model_cfgs["hydromodel_yml_dir"] + "/" + gage_id + ".yaml"
+        model = {
+            "calibrated_norm_param_file": calibrated_norm_param_file,
+            "param_range_file": param_range_file,
+            "target_unit": None,
+            "model_info_file": None,
         }
+        model_json = json.load(open(calibrated_norm_param_file, "r"))
+        # check parameters
+        model["target_unit"] = (
+            "m^3/s" if model["target_unit"] is None else model["target_unit"]
+        )
+        if model["model_info_file"] is None:
+            model["model_info"] = {
+                "name": "xaj",
+                "source_book": "HF",
+                "source_type": "sources5mm",
+                "time_interval_hours": 3,
+            }
+        else:
+            model["model_info"] = json.load(open(model["model_info_file"], "r"))
+        df = pd.DataFrame(model_json["paraScopes"])
+        df = df.set_index("key")
+        df = df[["actualValue"]]
+        filtered_df = df.T
+        filtered_df["STCD"] = filtered_df.apply(lambda x: gage_id, axis=1)
+        filtered_df = filtered_df.set_index("STCD")
+        model["calibrated_norm_params"] = filtered_df.values
     else:
-        model["model_info"] = json.load(open(model["model_info_file"], "r"))
-    df = pd.DataFrame(model_json["paraScopes"])
-    df = df.set_index("key")
-    df = df[["actualValue"]]
-    filtered_df = df.T
-    filtered_df["STCD"] = filtered_df.apply(lambda x: gage_id, axis=1)
-    filtered_df = filtered_df.set_index("STCD")
-    model["calibrated_norm_params"] = filtered_df.values
+        config_yml = os.path.join(model_cfgs["hydromodel_yml_dir"], "config.yaml")
+        config_ = yaml.load(open(config_yml, "r"), Loader=yaml.FullLoader)
+        model_info = config_["model"]
+        model_name = model_info["name"]
+        param_range_file = os.path.join(
+            model_cfgs["hydromodel_yml_dir"], "param_range.yaml"
+        )
+        algorithm_name = "".join(config_["algorithm"]["name"].lower().split("_"))
+        offline_cali_dir = os.path.join(
+            model_cfgs["hydromodel_yml_dir"],
+            f"{algorithm_name}_{model_name.split('_')[0]}",
+        )
+        calibrated_norm_params = pd.read_csv(
+            os.path.join(offline_cali_dir, "basins_norm_params.csv"), index_col=0
+        ).values
+        model = {
+            "name": model_name,
+            "calibrated_norm_params": calibrated_norm_params,
+            "model_info": model_info,
+            "param_range_file": param_range_file,
+        }
     return model
 
 
@@ -76,13 +109,14 @@ def infer_hydromodel(p_and_e, model):
     calibrated_norm_params = model["calibrated_norm_params"]
     model_info = model["model_info"]
     param_range_file = model["param_range_file"]
+    param_range = read_model_param_dict(param_range_file)
     qsim, _ = MODEL_DICT[model_info["name"]](
         p_and_e,
         calibrated_norm_params,
         # we set the warmup_length=0 but later we get results from warmup_length to the end to evaluate
         warmup_length=0,
         **model_info,
-        **{"param_range_file": param_range_file},
+        **param_range,
     )
     return qsim
 

@@ -1,10 +1,10 @@
 """
 Author: Shuolong Xu
 Date: 2024-05-30 09:11:04
-LastEditTime: 2025-01-12 14:25:48
+LastEditTime: 2025-01-12 18:44:06
 LastEditors: Wenyu Ouyang
 Description: main function for hydroevaluate
-FilePath: \hydroevaluate\hydroevaluate\hydroevaluate.py
+FilePath: \HydroForecastEvalc:\Users\wenyu\code\hydroevaluate\hydroevaluate\hydroevaluate.py
 Copyright (c) 2023-2024 Wenyu Ouyang. All rights reserved.
 """
 
@@ -30,6 +30,7 @@ from torchhydro.trainers.train_utils import (
 from torchhydro.models.model_utils import get_the_device
 from torchhydro.datasets.data_dict import datasets_dict
 from torchhydro.trainers.train_utils import rolling_evaluate
+from hydroevaluate.dataloader.hydrodataloader import DataloaderForHydroModel
 from hydroevaluate.modelloader.model_loader import ModelLoader
 from hydroevaluate.configs.config import DEFAULT_cfgs
 
@@ -38,7 +39,7 @@ class HydroEvaluate(ABC):
     def __init__(self, conf_file=None):
         self.cfgs = conf_file
         self._check_cfgs()
-        output_folder = self.cfgs["evaluation_cfgs"]["output_folder"]
+        output_folder = self.cfgs["data_cfgs"]["case_dir"]
         if not os.path.exists(output_folder):
             os.makedirs(output_folder)
         output_file = os.path.join(output_folder, "cfgs.json")
@@ -191,7 +192,7 @@ class EvalHydroModel(HydroEvaluate):
         self.data_cfgs = cfgs["data_cfgs"]
         self.model_cfgs = cfgs["model_cfgs"]
         self.modelloader = ModelLoader(cfgs["model_cfgs"])
-        self.data_source = StandardDataSourceForHydroModel(cfgs["data_cfgs"])
+        self.dataloader = DataloaderForHydroModel(self.data_cfgs)
 
     def _load_model(self, gage_id):
         return self.modelloader.load_model(gage_id=gage_id)
@@ -201,7 +202,7 @@ class EvalHydroModel(HydroEvaluate):
 
     def model_infer(self):
         gage_id_list = self.cfgs["data_cfgs"]["object_ids"]
-        p_and_e_dict = self.data_source.get_p_and_e_dict(gage_id_list)
+        p_and_e_dict = self.dataloader.load_input(gage_id_list)
         for gage_id in gage_id_list:
             try:
                 model = self._load_model(gage_id)
@@ -209,8 +210,8 @@ class EvalHydroModel(HydroEvaluate):
                 result_list = []
                 for p_and_e in p_and_e_list:
                     time_df = p_and_e["time"]
-                    p_and_e["rain"] = p_and_e["rain"].fillna(0)
-                    p_and_e = p_and_e[["rain", "pet"]].values.reshape(-1, 1, 2)
+                    p_and_e["prcp"] = p_and_e["prcp"].fillna(0)
+                    p_and_e = p_and_e[["prcp", "pet"]].values.reshape(-1, 1, 2)
                     result = self.modelloader.infer(p_and_e=p_and_e, model=model)
                     flattened_array = result.flatten()
                     df_qsim = pd.DataFrame(flattened_array, columns=["qsim"])
@@ -220,17 +221,19 @@ class EvalHydroModel(HydroEvaluate):
                     df_qsim = pd.concat([gage_id_df, time_df, df_qsim], axis=1)
                     df_qsim = df_qsim[["basin", "time", "qsim"]]
                     df_qsim.columns = ["basin", "time", "flow"]
-                    rho = self.data_cfgs["hindcast_length"]
+                    rho = self.data_cfgs["hindcast_length"] + self.data_cfgs[
+                        "warmup_length"
+                    ]
                     result = df_qsim.iloc[rho:].reset_index(drop=True)
                     result_list.append(result)
                 gage_result = (
                     pd.concat(result_list).sort_values(by="time").reset_index(drop=True)
                 )
-                if not os.path.exists(self.cfgs["evaluation_cfgs"]["output_folder"]):
-                    os.makedirs(self.cfgs["evaluation_cfgs"]["output_folder"])
+                if not os.path.exists(self.cfgs["data_cfgs"]["case_dir"]):
+                    os.makedirs(self.cfgs["data_cfgs"]["case_dir"])
                 gage_result.to_csv(
                     os.path.join(
-                        self.cfgs["evaluation_cfgs"]["output_folder"],
+                        self.cfgs["data_cfgs"]["case_dir"],
                         f"{gage_id}.csv",
                     ),
                     index=False,

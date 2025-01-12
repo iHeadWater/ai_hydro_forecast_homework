@@ -2,7 +2,7 @@
 Author: silencesoup silencesoup@outlook.com
 Date: 2024-09-03 10:16:32
 LastEditors: Wenyu Ouyang
-LastEditTime: 2025-01-12 11:10:17
+LastEditTime: 2025-01-12 18:00:02
 FilePath: \hydroevaluate\hydroevaluate\configs\config.py
 Description: configuration
 """
@@ -28,6 +28,7 @@ PET_ERA5LAND_NAME = "potential_evaporation"
 DATE_FORMATS = ["%Y-%m-%d-%H", "%Y-%m-%d"]
 
 DEFAULT_cfgs = {
+    "data_online": True,
     "data_cfgs": {
         "source_cfgs": {
             "source_name": "camels_us",
@@ -37,8 +38,7 @@ DEFAULT_cfgs = {
         "data_dir": "/ftproot/basins-interim",
         # where to save evaluation results
         "case_dir": "/ftproot/evaluation",
-        # TODO: this json folder is for hydromodel, should be renamed
-        "json_folder": "/home/xushuolong1/hydro/hydroevaluate/data/json",
+        "hydromodel_json_dir": "/home/xushuolong1/hydro/hydroevaluate/data/json",
         "stat_dict_file": "",
         # "object_ids": ["camels_01013500", "camels_01030500"],
         "object_ids": ["songliao_21401550", "songliao_21401050"],
@@ -149,10 +149,10 @@ DEFAULT_cfgs = {
         },
     },
     "model_cfgs": {
+        "model_online": True,
         # TODO: this json folder is for hydromodel, should be renamed
-        "json_folder": "/home/xushuolong1/hydro/hydroevaluate/data/json",
-        # TODO: this yaml is for hydromodel's param_range_dict, should be renamed
-        "yaml_folder": "/home/xushuolong1/hydro/hydroevaluate/data/yaml",
+        "hydromodel_json_dir": "/home/xushuolong1/hydro/hydroevaluate/data/json",
+        "hydromodel_yml_dir": "/home/xushuolong1/hydro/hydroevaluate/data/yaml",
         # if true, torchhydro's trained weight will be downloaded from modelscope
         "download": True,
         "model_repo": "iHeadWater/torchhydro-seq2seq-lstm",
@@ -178,8 +178,6 @@ DEFAULT_cfgs = {
         "device": [0],
     },
     "evaluation_cfgs": {
-        # your directory where you want to put your evaluation results
-        "output_folder": "/home/xushuolong1/hydro/hydroevaluate/data/output",
         "seq_first": False,
         # rolling is 0 means decoder-only model's prediction -- each period has one prediction
         # when rolling>0, such as 1, means perform forecasting each step after 1 period.
@@ -204,10 +202,12 @@ def default_config_file():
 
 
 def cmd(
+    data_online=None,
+    model_online=None,
     source_cfgs=None,
     data_dir=None,
     case_dir=None,
-    json_folder=None,
+    hydromodel_json_dir=None,
     stat_dict_file=None,
     object_ids=None,
     min_time_unit=None,
@@ -228,7 +228,7 @@ def cmd(
     constant_rm_nan=None,
     scaler=None,
     scaler_params=None,
-    yaml_folder=None,
+    hydromodel_yml_dir=None,
     download=None,
     model_repo=None,
     api=None,
@@ -247,10 +247,21 @@ def cmd(
     seq_first=None,
     rolling=None,
     long_seq_pred=None,
-    output_folder=None,
 ):
     """Command-line argument parser for updating configuration."""
     parser = argparse.ArgumentParser(description="Update model/data configuration.")
+    parser.add_argument(
+        "--data_online",
+        type=bool,
+        help="Whether the data is online.",
+        default=data_online,
+    )
+    parser.add_argument(
+        "--model_online",
+        type=bool,
+        help="Whether the model is online.",
+        default=model_online,
+    )
     parser.add_argument(
         "--source_cfgs",
         dest="source_cfgs",
@@ -272,7 +283,10 @@ def cmd(
         default=case_dir,
     )
     parser.add_argument(
-        "--json_folder", type=str, help="Path to the json folder.", default=json_folder
+        "--hydromodel_json_dir",
+        type=str,
+        help="Path to the json folder where pet files and norm_param files are saved.",
+        default=hydromodel_json_dir,
     )
     parser.add_argument(
         "--stat_dict_file",
@@ -358,7 +372,10 @@ def cmd(
         "--scaler_params", type=json.loads, help="Scaler params.", default=scaler_params
     )
     parser.add_argument(
-        "--yaml_folder", type=str, help="Yaml folder.", default=yaml_folder
+        "--hydromodel_yml_dir",
+        type=str,
+        help="Yaml folder to save hydromodel calibrated parameters.",
+        default=hydromodel_yml_dir,
     )
     parser.add_argument(
         "--download",
@@ -410,10 +427,6 @@ def cmd(
     parser.add_argument(
         "--long_seq_pred", type=bool, help="Long seq pred.", default=long_seq_pred
     )
-    parser.add_argument(
-        "--output_folder", type=str, help="Xaj Output folder.", default=output_folder
-    )
-
     # Parse command-line arguments
     args, _ = parser.parse_known_args()
 
@@ -432,6 +445,10 @@ def update_cfg(cfg_file, new_args):
         The parsed arguments from command-line input.
     """
     print("Updating configuration file...")
+    if new_args.data_online is not None:
+        cfg_file["data_cfgs"]["data_online"] = new_args.data_online
+    if new_args.model_online is not None:
+        cfg_file["model_cfgs"]["model_online"] = new_args.model_online
     if new_args.source_cfgs is not None:
         cfg_file["data_cfgs"]["source_cfgs"] = new_args.source_cfgs
     if new_args.data_dir is not None:
@@ -440,9 +457,9 @@ def update_cfg(cfg_file, new_args):
         cfg_file["data_cfgs"]["case_dir"] = new_args.case_dir
         if not os.path.exists(new_args.case_dir):
             os.makedirs(new_args.case_dir)
-    if new_args.json_folder is not None:
-        cfg_file["data_cfgs"]["json_folder"] = new_args.json_folder
-        cfg_file["model_cfgs"]["json_folder"] = new_args.json_folder
+    if new_args.hydromodel_json_dir is not None:
+        cfg_file["data_cfgs"]["hydromodel_json_dir"] = new_args.hydromodel_json_dir
+        cfg_file["model_cfgs"]["hydromodel_json_dir"] = new_args.hydromodel_json_dir
     if new_args.object_ids is not None:
         cfg_file["data_cfgs"]["object_ids"] = new_args.object_ids
     if new_args.min_time_unit is not None:
@@ -483,8 +500,8 @@ def update_cfg(cfg_file, new_args):
         cfg_file["data_cfgs"]["scaler"] = new_args.scaler
     if new_args.scaler_params is not None:
         cfg_file["data_cfgs"]["scaler_params"] = new_args.scaler_params
-    if new_args.yaml_folder is not None:
-        cfg_file["model_cfgs"]["yaml_folder"] = new_args.yaml_folder
+    if new_args.hydromodel_yml_dir is not None:
+        cfg_file["model_cfgs"]["hydromodel_yml_dir"] = new_args.hydromodel_yml_dir
     if new_args.download is not None and new_args.download is True:
         cfg_file["model_cfgs"]["download"] = new_args.download
         cfg_file["model_cfgs"]["pth_path"] = os.path.join(
@@ -533,7 +550,5 @@ def update_cfg(cfg_file, new_args):
         cfg_file["evaluation_cfgs"]["rolling"] = new_args.rolling
     if new_args.long_seq_pred is not None:
         cfg_file["evaluation_cfgs"]["long_seq_pred"] = new_args.long_seq_pred
-    if new_args.output_folder is not None:
-        cfg_file["evaluation_cfgs"]["output_folder"] = new_args.output_folder
 
     print("Configuration updated successfully.")
