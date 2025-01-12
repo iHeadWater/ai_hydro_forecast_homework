@@ -2,7 +2,7 @@
 Author: silencesoup silencesoup@outlook.com
 Date: 2024-09-03 10:16:32
 LastEditors: Wenyu Ouyang
-LastEditTime: 2025-01-11 16:16:50
+LastEditTime: 2025-01-12 11:10:17
 FilePath: \hydroevaluate\hydroevaluate\configs\config.py
 Description: configuration
 """
@@ -29,18 +29,24 @@ DATE_FORMATS = ["%Y-%m-%d-%H", "%Y-%m-%d"]
 
 DEFAULT_cfgs = {
     "data_cfgs": {
-        # 数据位置，以HydroDataCompiler的处理结果为准
+        "source_cfgs": {
+            "source_name": "camels_us",
+            "source_path": "/ftproot/datasets-origin",
+        },
+        # 原始数据位置，以HydroDataCompiler的处理结果为准
         "data_dir": "/ftproot/basins-interim",
+        # where to save evaluation results
+        "case_dir": "/ftproot/evaluation",
         # TODO: this json folder is for hydromodel, should be renamed
         "json_folder": "/home/xushuolong1/hydro/hydroevaluate/data/json",
-        "stat_file_path": "",
+        "stat_dict_file": "",
         # "object_ids": ["camels_01013500", "camels_01030500"],
         "object_ids": ["songliao_21401550", "songliao_21401050"],
         "min_time_unit": "h",
         "min_time_interval": 3,
         "t_range_test": [("2019-06-01-01", "2019-10-01-01")],
         "dataset": "Seq2SeqDatasetForEval",
-        "var_lst": [
+        "relevant_cols": [
             "total_precipitation_hourly",
             # "precipitationCal",
             # "hourly_precipitation",
@@ -49,7 +55,7 @@ DEFAULT_cfgs = {
             # "sm_rootzone",
         ],
         "var_self_orgnized": True,
-        # NOTE: the name and order of vars in feature_mapping must be same as var_lst
+        # NOTE: the name and order of vars in feature_mapping must be same as relevant_cols
         "feature_mapping": {
             "total_precipitation_hourly": {
                 "category": "precipitation",
@@ -79,11 +85,11 @@ DEFAULT_cfgs = {
         },
         "features_only_rho": ["soil_moisture"],
         "target_cols": ["streamflow", "sm_surface"],
-        "rho": 240,
-        "horizon": 56,
+        "hindcast_length": 240,
+        "forecast_length": 56,
         "warmup_length": 0,
         "prec_window": 1,
-        "constant_vars": [
+        "constant_cols": [
             "area",  # 面积
             "ele_mt_smn",  # 海拔(空间平均)
             "slp_dg_sav",  # 地形坡度 (空间平均)
@@ -102,6 +108,8 @@ DEFAULT_cfgs = {
         ],
         "relevant_rm_nan": True,
         "constant_rm_nan": True,
+        "target_rm_nan": False,
+        "scaler": "DapengScaler",
         "scaler_params": {
             "prcp_norm_cols": [
                 Q_CAMELS_US_NAME,
@@ -151,8 +159,6 @@ DEFAULT_cfgs = {
         # use your own api
         "api": "",
         "revision": "v1.0.1",
-        # your directory where you want to put your evaluation results
-        "local_dir": "",
         # torchhydro or hydromodel
         "model_type": "torchhydro",
         "model_name": "Seq2Seq",
@@ -198,33 +204,35 @@ def default_config_file():
 
 
 def cmd(
+    source_cfgs=None,
     data_dir=None,
+    case_dir=None,
     json_folder=None,
-    stat_file_path=None,
+    stat_dict_file=None,
     object_ids=None,
     min_time_unit=None,
     min_time_interval=None,
     t_range_test=None,
     dataset=None,
-    var_lst=None,
+    relevant_cols=None,
     var_self_orgnized=None,
     feature_mapping=None,
     features_only_rho=None,
     target_cols=None,
-    rho=None,
-    horizon=None,
+    hindcast_length=None,
+    forecast_length=None,
     warmup_length=None,
     prec_window=None,
-    constant_vars=None,
+    constant_cols=None,
     relevant_rm_nan=None,
     constant_rm_nan=None,
+    scaler=None,
     scaler_params=None,
     yaml_folder=None,
     download=None,
     model_repo=None,
     api=None,
     revision=None,
-    local_dir=None,
     model_type=None,
     model_name=None,
     model_hyperparam=None,
@@ -243,19 +251,34 @@ def cmd(
 ):
     """Command-line argument parser for updating configuration."""
     parser = argparse.ArgumentParser(description="Update model/data configuration.")
-
+    parser.add_argument(
+        "--source_cfgs",
+        dest="source_cfgs",
+        help="configs for data sources",
+        default=source_cfgs,
+        type=json.loads,
+    )
     # Add arguments for key configurations (只添加关键参数，其他的可以根据需要扩展)
     parser.add_argument(
-        "--data_dir", type=str, help="Path to the data directory.", default=data_dir
+        "--data_dir",
+        type=str,
+        help="Path to the data source directory.",
+        default=data_dir,
+    )
+    parser.add_argument(
+        "--case_dir",
+        type=str,
+        help="Path to the evaluation results directory. We also put model weights file and statistical dict file here.",
+        default=case_dir,
     )
     parser.add_argument(
         "--json_folder", type=str, help="Path to the json folder.", default=json_folder
     )
     parser.add_argument(
-        "--stat_file_path",
+        "--stat_dict_file",
         type=str,
-        help="Path to the stat file.",
-        default=stat_file_path,
+        help="where to save statistical dict file from train data",
+        default=stat_dict_file,
     )
     parser.add_argument(
         "--object_ids",
@@ -276,7 +299,9 @@ def cmd(
         "--t_range_test", type=list, help="Test time range.", default=t_range_test
     )
     parser.add_argument("--dataset", type=str, help="Dataset.", default=dataset)
-    parser.add_argument("--var_lst", type=list, help="Variable list.", default=var_lst)
+    parser.add_argument(
+        "--relevant_cols", type=list, help="Variable list.", default=relevant_cols
+    )
     parser.add_argument(
         "--var_self_orgnized",
         type=bool,
@@ -298,8 +323,12 @@ def cmd(
     parser.add_argument(
         "--target_cols", type=list, help="Target columns.", default=target_cols
     )
-    parser.add_argument("--rho", type=int, help="Rho.", default=rho)
-    parser.add_argument("--horizon", type=int, help="Horizon.", default=horizon)
+    parser.add_argument(
+        "--hindcast_length", type=int, help="hindcast_length.", default=hindcast_length
+    )
+    parser.add_argument(
+        "--forecast_length", type=int, help="forecast_length.", default=forecast_length
+    )
     parser.add_argument(
         "--warmup_length", type=int, help="Warmup length.", default=warmup_length
     )
@@ -307,13 +336,20 @@ def cmd(
         "--prec_window", type=int, help="Prec window.", default=prec_window
     )
     parser.add_argument(
-        "--constant_vars", type=str, help="Constant vars.", default=constant_vars
+        "--constant_cols", type=str, help="Constant vars.", default=constant_cols
     )
     parser.add_argument(
         "--relevant_rm_nan", type=bool, help="Relevant rm nan.", default=relevant_rm_nan
     )
     parser.add_argument(
         "--constant_rm_nan", type=bool, help="Constant rm nan.", default=constant_rm_nan
+    )
+    parser.add_argument(
+        "--scaler",
+        dest="scaler",
+        help="Choose a Scaler function",
+        default=scaler,
+        type=str,
     )
     parser.add_argument(
         "--scaler_params", type=json.loads, help="Scaler params.", default=scaler_params
@@ -332,7 +368,6 @@ def cmd(
     )
     parser.add_argument("--api", type=str, help="API.", default=api)
     parser.add_argument("--revision", type=str, help="Revision.", default=revision)
-    parser.add_argument("--local_dir", type=str, help="Local dir.", default=local_dir)
     parser.add_argument(
         "--model_type", type=str, help="Model type.", default=model_type
     )
@@ -394,9 +429,14 @@ def update_cfg(cfg_file, new_args):
         The parsed arguments from command-line input.
     """
     print("Updating configuration file...")
-
+    if new_args.source_cfgs is not None:
+        cfg_file["data_cfgs"]["source_cfgs"] = new_args.source_cfgs
     if new_args.data_dir is not None:
         cfg_file["data_cfgs"]["data_dir"] = new_args.data_dir
+    if new_args.case_dir is not None:
+        cfg_file["data_cfgs"]["case_dir"] = new_args.case_dir
+        if not os.path.exists(new_args.case_dir):
+            os.makedirs(new_args.case_dir)
     if new_args.json_folder is not None:
         cfg_file["data_cfgs"]["json_folder"] = new_args.json_folder
         cfg_file["model_cfgs"]["json_folder"] = new_args.json_folder
@@ -410,8 +450,8 @@ def update_cfg(cfg_file, new_args):
         cfg_file["data_cfgs"]["t_range_test"] = new_args.t_range_test
     if new_args.dataset is not None:
         cfg_file["data_cfgs"]["dataset"] = new_args.dataset
-    if new_args.var_lst is not None:
-        cfg_file["data_cfgs"]["var_lst"] = new_args.var_lst
+    if new_args.relevant_cols is not None:
+        cfg_file["data_cfgs"]["relevant_cols"] = new_args.relevant_cols
     if new_args.var_self_orgnized is not None:
         cfg_file["data_cfgs"]["var_self_orgnized"] = new_args.var_self_orgnized
     if new_args.feature_mapping is not None:
@@ -420,39 +460,40 @@ def update_cfg(cfg_file, new_args):
         cfg_file["data_cfgs"]["features_only_rho"] = new_args.features_only_rho
     if new_args.target_cols is not None:
         cfg_file["data_cfgs"]["target_cols"] = new_args.target_cols
-    if new_args.rho is not None:
-        cfg_file["data_cfgs"]["rho"] = new_args.rho
-    if new_args.horizon is not None:
-        cfg_file["data_cfgs"]["horizon"] = new_args.horizon
+    if new_args.hindcast_length is not None:
+        cfg_file["data_cfgs"]["hindcast_length"] = new_args.hindcast_length
+    if new_args.forecast_length is not None:
+        cfg_file["data_cfgs"]["forecast_length"] = new_args.forecast_length
     if new_args.warmup_length is not None:
         cfg_file["data_cfgs"]["warmup_length"] = new_args.warmup_length
     if new_args.prec_window is not None:
         cfg_file["data_cfgs"]["prec_window"] = new_args.prec_window
-    if new_args.constant_vars is not None:
-        cfg_file["data_cfgs"]["constant_vars"] = new_args.constant_vars
+    if new_args.constant_cols is not None:
+        cfg_file["data_cfgs"]["constant_cols"] = new_args.constant_cols
     if new_args.relevant_rm_nan is not None:
         cfg_file["data_cfgs"]["relevant_rm_nan"] = new_args.relevant_rm_nan
     if new_args.constant_rm_nan is not None:
         cfg_file["data_cfgs"]["constant_rm_nan"] = new_args.constant_rm_nan
+    if new_args.scaler is not None:
+        cfg_file["data_cfgs"]["scaler"] = new_args.scaler
     if new_args.scaler_params is not None:
         cfg_file["data_cfgs"]["scaler_params"] = new_args.scaler_params
     if new_args.yaml_folder is not None:
         cfg_file["model_cfgs"]["yaml_folder"] = new_args.yaml_folder
-    if new_args.download is not None:
+    if new_args.download is not None and new_args.download is True:
         cfg_file["model_cfgs"]["download"] = new_args.download
-        cfg_file["model_cfgs"]["local_dir"] = new_args.local_dir
         cfg_file["model_cfgs"]["pth_path"] = os.path.join(
-            cfg_file["model_cfgs"]["local_dir"],
+            cfg_file["data_cfgs"]["case_dir"],
             "best_model.pth",
         )
-        cfg_file["data_cfgs"]["stat_file_path"] = os.path.join(
-            cfg_file["model_cfgs"]["local_dir"],
+        cfg_file["data_cfgs"]["stat_dict_file"] = os.path.join(
+            cfg_file["data_cfgs"]["case_dir"],
             "dapengscaler_stat.json",
         )
-    elif new_args.pth_path is not None and new_args.stat_file_path is not None:
+    elif new_args.pth_path is not None and new_args.stat_dict_file is not None:
         cfg_file["model_cfgs"]["download"] = False
         cfg_file["model_cfgs"]["pth_path"] = new_args.pth_path
-        cfg_file["data_cfgs"]["stat_file_path"] = new_args.stat_file_path
+        cfg_file["data_cfgs"]["stat_dict_file"] = new_args.stat_dict_file
     if new_args.model_repo is not None:
         cfg_file["model_cfgs"]["model_repo"] = new_args.model_repo
     if new_args.api is not None:

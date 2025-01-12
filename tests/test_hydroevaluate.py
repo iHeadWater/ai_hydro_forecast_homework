@@ -46,17 +46,17 @@ def test_model_infer_with_cmd():
         t_range_test=[("2021-06-01-01", "2021-11-01-01")],
         download=True,
         # pth_path="/home/xushuolong1/hydro/hydroevaluate/data/model_v101/best_model.pth",
-        # stat_file_path="/home/xushuolong1/hydro/hydroevaluate/data/model_v101/dapengscaler_stat.json",
-        local_dir=r"C:\Programming\hydro\hydroevaluate\data\model",
+        # stat_dict_file="/home/xushuolong1/hydro/hydroevaluate/data/model_v101/dapengscaler_stat.json",
+        case_dir=r"C:\Programming\hydro\hydroevaluate\data\model",
         model_type="torchhydro",
         device=[-1],
         model_name="Seq2Seq",
-        horizon=8,
+        forecast_length=8,
         rolling=8,
-        rho=240,
+        hindcast_length=240,
         min_time_interval=3,
         min_time_unit="h",
-        var_lst=["total_precipitation_hourly", "sm_surface"],
+        relevant_cols=["total_precipitation_hourly", "sm_surface"],
         feature_mapping={
             "total_precipitation_hourly": {
                 "category": "precipitation",
@@ -98,11 +98,11 @@ def test_model_infer():
     # sourcery skip: no-conditionals-in-tests
     if DEFAULT_cfgs["model_cfgs"]["download"]:
         DEFAULT_cfgs["model_cfgs"]["pth_path"] = os.path.join(
-            DEFAULT_cfgs["model_cfgs"]["local_dir"],
+            DEFAULT_cfgs["data_cfgs"]["case_dir"],
             "best_model.pth",
         )
-        DEFAULT_cfgs["data_cfgs"]["stat_file_path"] = os.path.join(
-            DEFAULT_cfgs["model_cfgs"]["local_dir"],
+        DEFAULT_cfgs["data_cfgs"]["stat_dict_file"] = os.path.join(
+            DEFAULT_cfgs["data_cfgs"]["case_dir"],
             "dapengscaler_stat.json",
         )
     eval_deep_hydro = EvalDeepHydro(DEFAULT_cfgs)
@@ -213,16 +213,16 @@ def test_model_infer_with_self_made_data():
     data_source = MockDataSource()
     cfg_file = default_config_file()
     args = cmd(
-        rho=240,
-        horizon=56,
+        hindcast_length=240,
+        forecast_length=56,
         object_ids=["songliao_21401050", "songliao_21401550"],
         t_range_test=[("2015-06-01-01", "2015-10-01-04")],
         download=False,
         pth_path="/home/xushuolong1/hydro/hydroevaluate/data/train_with_camels_3h_era5land_stlflow/best_model.pth",
-        stat_file_path="/home/xushuolong1/hydro/hydroevaluate/data/train_with_camels_3h_era5land_stlflow/dapengscaler_stat.json",
+        stat_dict_file="/home/xushuolong1/hydro/hydroevaluate/data/train_with_camels_3h_era5land_stlflow/dapengscaler_stat.json",
         model_type="torchhydro",
         model_name="Seq2Seq",
-        var_lst=["total_precipitation_hourly"],
+        relevant_cols=["total_precipitation_hourly"],
         target_cols=["streamflow"],
         feature_mapping={
             "total_precipitation_hourly": {
@@ -251,7 +251,7 @@ def test_hydromodel_infer():
     args = cmd(
         model_type="hydromodel",
         object_ids=["songliao_21401550", "songliao_21401050"],
-        var_lst=[
+        relevant_cols=[
             "total_precipitation_hourly",
             "hourly_precipitation",
             "sm_surface",

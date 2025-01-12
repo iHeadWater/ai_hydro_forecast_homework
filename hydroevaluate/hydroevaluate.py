@@ -1,7 +1,7 @@
 """
 Author: Shuolong Xu
 Date: 2024-05-30 09:11:04
-LastEditTime: 2025-01-11 20:59:16
+LastEditTime: 2025-01-12 09:22:55
 LastEditors: Wenyu Ouyang
 Description: main function for hydroevaluate
 FilePath: \hydroevaluate\hydroevaluate\hydroevaluate.py
@@ -68,12 +68,11 @@ class HydroEvaluate(ABC):
 
 
 class EvalDeepHydro(HydroEvaluate):
-    def __init__(self, conf_file=None, data_source=None):
+    def __init__(self, conf_file=None):
         super().__init__(conf_file)
         if self.cfgs["model_cfgs"]["download"]:
             self._download_model()
         self.modelloader = ModelLoader(self.cfgs["model_cfgs"])
-        self.data_source = data_source
         self.data_set = datasets_dict[self.cfgs["data_cfgs"]["dataset"]](
             self.cfgs["data_cfgs"], "test"
         )
@@ -98,7 +97,7 @@ class EvalDeepHydro(HydroEvaluate):
         snapshot_download(
             model_id=self.cfgs["model_cfgs"]["model_repo"],
             revision=self.cfgs["model_cfgs"]["revision"],
-            local_dir=self.cfgs["model_cfgs"]["local_dir"],
+            case_dir=self.cfgs["data_cfgs"]["case_dir"],
         )
 
     def _load_model(self):
@@ -117,15 +116,15 @@ class EvalDeepHydro(HydroEvaluate):
             pred = reduce(lambda x, y: np.vstack((x, y)), test_preds)
         ngrid = self.n_grid
         if eval_cfgs["rolling"] > 0:
-            if eval_cfgs["rolling"] != data_cfgs["horizon"]:
+            if eval_cfgs["rolling"] != data_cfgs["forecast_length"]:
                 raise NotImplementedError("Rolling window not implemented")
             # TODO: not we only support each time has one prediction
             nt = self.data_set.nt
             target_len = len(data_cfgs["target_cols"])
             prec_window = data_cfgs["prec_window"]
-            forecast_length = data_cfgs["horizon"]
+            forecast_length = data_cfgs["forecast_length"]
             window_size = prec_window + forecast_length
-            rho = data_cfgs["rho"]
+            rho = data_cfgs["hindcast_length"]
             recover_len = nt - rho + prec_window
             samples = int(pred.shape[0] / ngrid)
             pred_ = np.full((ngrid, recover_len, target_len), np.nan)
@@ -225,7 +224,7 @@ class EvalHydroModel(HydroEvaluate):
                     df_qsim = pd.concat([gage_id_df, time_df, df_qsim], axis=1)
                     df_qsim = df_qsim[["basin", "time", "qsim"]]
                     df_qsim.columns = ["basin", "time", "flow"]
-                    rho = self.data_cfgs["rho"]
+                    rho = self.data_cfgs["hindcast_length"]
                     result = df_qsim.iloc[rho:].reset_index(drop=True)
                     result_list.append(result)
                 gage_result = (
