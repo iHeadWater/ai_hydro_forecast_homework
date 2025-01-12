@@ -1,7 +1,7 @@
 """
 Author: Wenyu Ouyang
 Date: 2024-05-30 09:11:04
-LastEditTime: 2024-06-02 15:46:14
+LastEditTime: 2025-01-12 11:23:45
 LastEditors: Wenyu Ouyang
 Description: Load hydromodel
 FilePath: \hydroevaluate\hydroevaluate\modelloader\model.py
@@ -9,15 +9,13 @@ Copyright (c) 2023-2024 Wenyu Ouyang. All rights reserved.
 """
 
 import json
-import os
-import numpy as np
-import pandas as pd
-import pint
-from hydrodatasource.utils.utils import streamflow_unit_conv
-from hydromodel.models.model_dict import MODEL_DICT
+import pint  # noqa
 import torch
+import pandas as pd
+from hydromodel.models.model_dict import MODEL_DICT
 from torchhydro.models.model_dict_function import pytorch_model_dict
 from torchhydro.models.model_utils import get_the_device
+from torchhydro.trainers import train_utils
 
 ALL_MODELS_DICT = {**MODEL_DICT, **pytorch_model_dict}
 
@@ -117,27 +115,5 @@ def infer_torchmodel(**kwargs):
         raise ValueError("model and xs should be provided")
     model = model.to(device)
     model.eval()
-    if type(xs) is list:
-        xs = [
-            (
-                data_tmp.permute([1, 0, 2]).to(device)
-                if seq_first and data_tmp.ndim == 3
-                else data_tmp.to(device)
-            )
-            for data_tmp in xs
-        ]
-    else:
-        xs = [
-            (
-                xs.permute([1, 0, 2]).to(device)
-                if seq_first and xs.ndim == 3
-                else xs.to(device)
-            )
-        ]
-    output = model(*xs)
-    if type(output) is tuple:
-        # Convention: y_p must be the first output of model
-        output = output[0]
-    if seq_first:
-        output = output.transpose(0, 1)
+    _, output = train_utils.model_infer(seq_first, device, model, xs, ys=None)
     return output

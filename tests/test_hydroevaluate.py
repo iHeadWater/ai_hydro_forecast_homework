@@ -80,7 +80,7 @@ def test_model_infer_with_cmd():
             "output_size": 2,
             "hidden_size": 256,
             "forecast_length": 8,
-            "prec_window": 1,
+            "hindcast_output_window": 1,
             "teacher_forcing_ratio": 0.5,
         },
         revision="v1.0.1",
@@ -237,7 +237,7 @@ def test_model_infer_with_self_made_data():
             "output_size": 1,
             "hidden_size": 256,
             "forecast_length": 56,
-            "prec_window": 1,
+            "hindcast_output_window": 1,
             "teacher_forcing_ratio": 0.5,
         },
     )

@@ -88,7 +88,7 @@ DEFAULT_cfgs = {
         "hindcast_length": 240,
         "forecast_length": 56,
         "warmup_length": 0,
-        "prec_window": 1,
+        "hindcast_output_window": 1,
         "constant_cols": [
             "area",  # 面积
             "ele_mt_smn",  # 海拔(空间平均)
@@ -168,7 +168,7 @@ DEFAULT_cfgs = {
             "output_size": 2,
             "hidden_size": 256,
             "forecast_length": 56,
-            "prec_window": 1,
+            "hindcast_output_window": 1,
             "teacher_forcing_ratio": 0.5,
         },
         # local weight path
@@ -222,7 +222,7 @@ def cmd(
     hindcast_length=None,
     forecast_length=None,
     warmup_length=None,
-    prec_window=None,
+    hindcast_output_window=None,
     constant_cols=None,
     relevant_rm_nan=None,
     constant_rm_nan=None,
@@ -333,7 +333,10 @@ def cmd(
         "--warmup_length", type=int, help="Warmup length.", default=warmup_length
     )
     parser.add_argument(
-        "--prec_window", type=int, help="Prec window.", default=prec_window
+        "--hindcast_output_window",
+        type=int,
+        help="the length of output window for hindcast.",
+        default=hindcast_output_window,
     )
     parser.add_argument(
         "--constant_cols", type=str, help="Constant vars.", default=constant_cols
@@ -466,8 +469,10 @@ def update_cfg(cfg_file, new_args):
         cfg_file["data_cfgs"]["forecast_length"] = new_args.forecast_length
     if new_args.warmup_length is not None:
         cfg_file["data_cfgs"]["warmup_length"] = new_args.warmup_length
-    if new_args.prec_window is not None:
-        cfg_file["data_cfgs"]["prec_window"] = new_args.prec_window
+    if new_args.hindcast_output_window is not None:
+        cfg_file["data_cfgs"][
+            "hindcast_output_window"
+        ] = new_args.hindcast_output_window
     if new_args.constant_cols is not None:
         cfg_file["data_cfgs"]["constant_cols"] = new_args.constant_cols
     if new_args.relevant_rm_nan is not None:

@@ -1,7 +1,7 @@
 """
 Author: Shuolong Xu
 Date: 2024-05-30 09:11:04
-LastEditTime: 2025-01-12 09:22:55
+LastEditTime: 2025-01-12 14:25:48
 LastEditors: Wenyu Ouyang
 Description: main function for hydroevaluate
 FilePath: \hydroevaluate\hydroevaluate\hydroevaluate.py
@@ -20,9 +20,8 @@ from torch.utils.data import DataLoader
 import numpy as np
 import torch
 import yaml
-from scipy import signal
 from functools import reduce
-from yaml import Loader, Dumper
+from yaml import Dumper
 from modelscope import HubApi
 from modelscope import snapshot_download
 from torchhydro.trainers.train_utils import (
@@ -30,6 +29,7 @@ from torchhydro.trainers.train_utils import (
 )
 from torchhydro.models.model_utils import get_the_device
 from torchhydro.datasets.data_dict import datasets_dict
+from torchhydro.trainers.train_utils import rolling_evaluate
 from hydroevaluate.modelloader.model_loader import ModelLoader
 from hydroevaluate.configs.config import DEFAULT_cfgs
 
@@ -110,31 +110,27 @@ class EvalDeepHydro(HydroEvaluate):
         seq_first = eval_cfgs["seq_first"]
         test_preds = []
         with torch.no_grad():
-            for xs in self.dataloader:
+            for xs, _ in self.dataloader:
                 pred = self.modelloader.infer(seq_first=seq_first, model=model, xs=xs)
                 test_preds.append(pred.cpu().numpy())
             pred = reduce(lambda x, y: np.vstack((x, y)), test_preds)
-        ngrid = self.n_grid
         if eval_cfgs["rolling"] > 0:
-            if eval_cfgs["rolling"] != data_cfgs["forecast_length"]:
-                raise NotImplementedError("Rolling window not implemented")
-            # TODO: not we only support each time has one prediction
+            ngrid = self.n_grid
             nt = self.data_set.nt
-            target_len = len(data_cfgs["target_cols"])
-            prec_window = data_cfgs["prec_window"]
+            nf = len(data_cfgs["target_cols"])
+            hindcast_output_window = data_cfgs["hindcast_output_window"]
             forecast_length = data_cfgs["forecast_length"]
-            window_size = prec_window + forecast_length
             rho = data_cfgs["hindcast_length"]
-            recover_len = nt - rho + prec_window
-            samples = int(pred.shape[0] / ngrid)
-            pred_ = np.full((ngrid, recover_len, target_len), np.nan)
-            # recover pred to pred_ and obs to obs_
-            pred_4d = pred.reshape(ngrid, samples, window_size, target_len)
-            for i in range(ngrid):
-                for j in range(0, recover_len - window_size + 1, window_size):
-                    pred_[i, j : j + window_size, :] = pred_4d[i, j, :, :]
-            pred = pred_.reshape(ngrid, recover_len, target_len)
-        pred = self.data_set.denormalize(pred)
+            rolling = eval_cfgs["rolling"]
+            pred = rolling_evaluate(
+                (ngrid, nt, nf),
+                rho,
+                forecast_length,
+                rolling,
+                hindcast_output_window,
+                pred,
+            )
+        pred = self.data_set.denormalize(pred, rolling)
         return pred
 
     def model_evaluate(self, obs_xr):

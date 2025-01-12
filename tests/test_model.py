@@ -67,7 +67,7 @@ def test_load_s2s_local_pth():
         "output_size": 2,
         "hidden_size": 256,
         "forecast_length": 56,
-        "prec_window": 1,
+        "hindcast_output_window": 1,
         "teacher_forcing_ratio": 0.5,
     }
     pth_path = "/home/xushuolong1/hydro/hydroevaluate/data/best_model.pth"
