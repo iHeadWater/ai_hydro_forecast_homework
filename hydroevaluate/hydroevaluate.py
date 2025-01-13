@@ -4,7 +4,7 @@ Date: 2024-05-30 09:11:04
 LastEditTime: 2025-01-12 18:44:06
 LastEditors: Wenyu Ouyang
 Description: main function for hydroevaluate
-FilePath: \HydroForecastEvalc:\Users\wenyu\code\hydroevaluate\hydroevaluate\hydroevaluate.py
+FilePath: \hydroevaluate\hydroevaluate\hydroevaluate.py
 Copyright (c) 2023-2024 Wenyu Ouyang. All rights reserved.
 """
 
@@ -115,14 +115,14 @@ class EvalDeepHydro(HydroEvaluate):
                 pred = self.modelloader.infer(seq_first=seq_first, model=model, xs=xs)
                 test_preds.append(pred.cpu().numpy())
             pred = reduce(lambda x, y: np.vstack((x, y)), test_preds)
-        if eval_cfgs["rolling"] > 0:
+        rolling = eval_cfgs["rolling"]
+        if rolling > 0:
             ngrid = self.n_grid
             nt = self.data_set.nt
             nf = len(data_cfgs["target_cols"])
             hindcast_output_window = data_cfgs["hindcast_output_window"]
             forecast_length = data_cfgs["forecast_length"]
             rho = data_cfgs["hindcast_length"]
-            rolling = eval_cfgs["rolling"]
             pred = rolling_evaluate(
                 (ngrid, nt, nf),
                 rho,
@@ -221,9 +221,10 @@ class EvalHydroModel(HydroEvaluate):
                     df_qsim = pd.concat([gage_id_df, time_df, df_qsim], axis=1)
                     df_qsim = df_qsim[["basin", "time", "qsim"]]
                     df_qsim.columns = ["basin", "time", "flow"]
-                    rho = self.data_cfgs["hindcast_length"] + self.data_cfgs[
-                        "warmup_length"
-                    ]
+                    rho = (
+                        self.data_cfgs["hindcast_length"]
+                        + self.data_cfgs["warmup_length"]
+                    )
                     result = df_qsim.iloc[rho:].reset_index(drop=True)
                     result_list.append(result)
                 gage_result = (
