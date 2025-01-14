@@ -1,35 +1,37 @@
-import pathlib
-import re
-from matplotlib.font_manager import FontProperties
-import xarray as xr
-import matplotlib.pyplot as plt
-from definitions import PROJECT_DIR, DATASET_DIR, RESULT_DIR
-from torchhydro import CACHE_DIR
 import os
-from datetime import datetime, timedelta
+import xarray as xr
 import pandas as pd
+import matplotlib.pyplot as plt
 from matplotlib import rcParams
-import geopandas as gpd
+from matplotlib.font_manager import FontProperties
+from torchhydro import CACHE_DIR
 
-user_home = os.path.expanduser("~")
-font_path = os.path.join(user_home, ".fonts/SimHei.ttf")
+
+def load_user_font():
+    user_home = os.path.expanduser("~")
+    font_path = os.path.join(user_home, ".fonts/SimHei.ttf")
+    font_prop = FontProperties(fname=font_path)
+    rcParams["font.family"] = font_prop.get_name()
+    rcParams["axes.unicode_minus"] = False
+    return font_prop
 
 
 def plot_predobs_with_tp(
-    basin_info,
+    target_basin_id,
     output_folder,
-    nc_file,
+    basin_info_file,
+    pred_nc,
+    obs_nc,
     basin_column,
     precip_var,
-    pred_nc,
     pred_colunm,
-    target_basin_id,
     time_unit,
-    time_start=None,
-    time_end=None,
+    time_range=None,
     station_dict=None,
     trans_unit=True,
 ):
+    basin_info = pd.read_csv(basin_info_file)
+    time_start, time_end = time_range
     # TODO: make the function more general
     if pred_colunm == "streamflow":
         var_unit = "m^3/s" if trans_unit else "mm/" + time_unit
@@ -38,30 +40,24 @@ def plot_predobs_with_tp(
     else:
         var_unit = None
     tp_unit = "mm/" + time_unit
-    font_prop = FontProperties(fname=font_path)
-    rcParams["font.family"] = font_prop.get_name()
-    rcParams["axes.unicode_minus"] = False
     if time_unit == "3h":
         time_end = pd.to_datetime(time_end) + pd.Timedelta(hours=1)
         time_start = pd.to_datetime(time_start) + pd.Timedelta(hours=1)
     else:
         time_start = pd.to_datetime(time_start)
         time_end = pd.to_datetime(time_end)
-    ds = xr.open_dataset(nc_file)
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    if target_basin_id in ds[basin_column].values:
+    if target_basin_id in obs_nc[basin_column].values:
         # print(f"Processing {nc_file} with basin_id {target_basin_id}")
 
         # extract the data for the target basin
-        basin_data = ds.sel({basin_column: target_basin_id})
-        obs = ds.sel({basin_column: target_basin_id})[pred_colunm]
+        basin_data = obs_nc.sel({basin_column: target_basin_id})
+        obs = obs_nc.sel({basin_column: target_basin_id})[pred_colunm]
 
-        pred = xr.open_dataset(pred_nc).sel({basin_column: target_basin_id})[
-            pred_colunm
-        ]
+        pred = pred_nc.sel({basin_column: target_basin_id})[pred_colunm]
 
         # if time_start and time_end are provided, adjust the time range
         if time_start and time_end:
@@ -111,19 +107,6 @@ def plot_predobs_with_tp(
         else:
 
             print(f"{target_basin_id} not found in station_dict")
-
-        fig, ax1 = plt.subplots(figsize=(10, 6))
-
-        ax1.bar(time, precip, width=0.1, color="blue", alpha=0.6, label="Precipitation")
-        ax1.set_ylabel(f"tp {tp_unit}", color="blue", fontproperties=font_prop)
-        ax1.tick_params(axis="y", labelcolor="blue")
-
-        ax1.set_ylim(0, precip.max() * 5)
-        ax1.invert_yaxis()
-
-        ax2 = ax1.twinx()
-
-        # transform the unit of obs and pred
         if trans_unit:
             if time_unit == "1D":
                 obs_hourly = obs / 24
@@ -140,39 +123,75 @@ def plot_predobs_with_tp(
             else:  # time_unit == '1h'
                 obs = obs * basin_area / 3.6
                 pred = pred * basin_area / 3.6
-
-        ax2.plot(
+        title_name = f"{target_basin_id}_tp_{pred_colunm}"
+        ylabel = f"{pred_colunm} {var_unit}"
+        tp_ylabel = f"Precipitation {tp_unit}"
+        plot_rainfall_runoff(
             time,
             obs,
-            color="green",
-            linestyle="-",
-            label="observed value",
-        )
-        ax2.plot(
-            time,
+            precip,
             pred,
-            color="red",
-            linestyle="--",
-            label="predicted value",
+            title_name,
+            ylabel,
+            tp_ylabel,
         )
-
-        ax2.set_ylabel(
-            f"{pred_colunm} {var_unit}", color="red", fontproperties=font_prop
-        )
-        ax2.tick_params(axis="y", labelcolor="red")
-
-        plt.title(
-            f"{target_basin_id}_tp_{pred_colunm}",
-            fontproperties=font_prop,
-        )
-
-        plt.legend(loc="upper left")
 
         plt.savefig(f"{output_folder}/{target_basin_id}_{pred_colunm}.png")
 
-        ds.close()
+        obs_nc.close()
     else:
-        print(f"{target_basin_id} not found in {nc_file}")
+        print(f"{target_basin_id} not found in {obs_nc}")
+
+
+def plot_rainfall_runoff(
+    time,
+    obs,
+    precip,
+    pred,
+    title_name,
+    output_ylabel,
+    tp_ylabel,
+    font_prop=None,
+):
+    if font_prop is None:
+        font_prop = load_user_font()
+
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+
+    ax1.bar(time, precip, width=0.1, color="blue", alpha=0.6, label="Precipitation")
+    ax1.set_ylabel(tp_ylabel, color="blue", fontproperties=font_prop)
+    ax1.tick_params(axis="y", labelcolor="blue")
+
+    ax1.set_ylim(0, precip.max() * 5)
+    ax1.invert_yaxis()
+
+    ax2 = ax1.twinx()
+
+    # transform the unit of obs and pred
+    ax2.plot(
+        time,
+        obs,
+        color="green",
+        linestyle="-",
+        label="observed value",
+    )
+    ax2.plot(
+        time,
+        pred,
+        color="red",
+        linestyle="--",
+        label="predicted value",
+    )
+
+    ax2.set_ylabel(output_ylabel, color="red", fontproperties=font_prop)
+    ax2.tick_params(axis="y", labelcolor="red")
+
+    plt.title(
+        title_name,
+        fontproperties=font_prop,
+    )
+
+    plt.legend(loc="upper left")
 
 
 def get_nc_files(target_basin_id, time_unit):
@@ -204,36 +223,3 @@ def get_nc_files(target_basin_id, time_unit):
             except Exception as e:
                 print(f"Error reading {file_name}: {e}")
     return None
-
-
-def plt_by_nc(
-    pred_nc,
-    basin_ids,
-    basin_info_csv,
-    basin_column,
-    precip_var,
-    pred_colunm,
-    time_unit,
-    project_name,
-    time_range,
-    trans_unit=False,
-):
-    output_folder = os.path.join(RESULT_DIR, project_name)
-    basin_info = pd.read_csv(basin_info_csv)
-
-    for basin_id in basin_ids:
-        nc_file = get_nc_files(basin_id, time_unit)
-        plot_predobs_with_tp(
-            basin_info,
-            output_folder,
-            nc_file,
-            basin_column,
-            precip_var,
-            pred_nc,
-            pred_colunm,
-            basin_id,
-            time_unit,
-            time_start=time_range[0],
-            time_end=time_range[1],
-            trans_unit=trans_unit,
-        )
