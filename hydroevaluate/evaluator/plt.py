@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from matplotlib.font_manager import FontProperties
+from hydroutils.hydro_plot import plot_rainfall_runoff
 from torchhydro import CACHE_DIR
 
 
@@ -128,12 +129,13 @@ def plot_predobs_with_tp(
         tp_ylabel = f"Precipitation {tp_unit}"
         plot_rainfall_runoff(
             time,
-            obs,
             precip,
-            pred,
-            title_name,
-            ylabel,
-            tp_ylabel,
+            [obs, pred],
+            fig_size=(10, 6),
+            title=title_name,
+            ylabel=ylabel,
+            prcp_ylabel=tp_ylabel,
+            leg_lst=["Observation", "Prediction"],
         )
 
         plt.savefig(f"{output_folder}/{target_basin_id}_{pred_colunm}.png")
@@ -141,85 +143,3 @@ def plot_predobs_with_tp(
         obs_nc.close()
     else:
         print(f"{target_basin_id} not found in {obs_nc}")
-
-
-def plot_rainfall_runoff(
-    time,
-    obs,
-    precip,
-    pred,
-    title_name,
-    output_ylabel,
-    tp_ylabel,
-    font_prop=None,
-):
-    if font_prop is None:
-        font_prop = load_user_font()
-
-    fig, ax1 = plt.subplots(figsize=(10, 6))
-
-    ax1.bar(time, precip, width=0.1, color="blue", alpha=0.6, label="Precipitation")
-    ax1.set_ylabel(tp_ylabel, color="blue", fontproperties=font_prop)
-    ax1.tick_params(axis="y", labelcolor="blue")
-
-    ax1.set_ylim(0, precip.max() * 5)
-    ax1.invert_yaxis()
-
-    ax2 = ax1.twinx()
-
-    # transform the unit of obs and pred
-    ax2.plot(
-        time,
-        obs,
-        color="green",
-        linestyle="-",
-        label="observed value",
-    )
-    ax2.plot(
-        time,
-        pred,
-        color="red",
-        linestyle="--",
-        label="predicted value",
-    )
-
-    ax2.set_ylabel(output_ylabel, color="red", fontproperties=font_prop)
-    ax2.tick_params(axis="y", labelcolor="red")
-
-    plt.title(
-        title_name,
-        fontproperties=font_prop,
-    )
-
-    plt.legend(loc="upper left")
-
-
-def get_nc_files(target_basin_id, time_unit):
-
-    for file_name in os.listdir(CACHE_DIR):
-        if file_name.endswith(".nc") and time_unit in file_name:
-            file_path = os.path.join(CACHE_DIR, file_name)
-
-            try:
-                # open the dataset
-                dataset = xr.open_dataset(file_path)
-
-                # check if the dataset contains the basin column
-                if "basin" in dataset:
-                    # get all basin ids
-                    basin_ids = dataset["basin"].values
-
-                    if target_basin_id in basin_ids:
-                        print(f"Found basin {target_basin_id} in file: {file_name}")
-                        dataset.close()
-                        return file_path
-                    else:
-                        dataset.close()
-                        # print(f"basin {target_basin_id} not found in file: {file_name}")
-                else:
-                    dataset.close()
-                    # print(f"basin not found in file: {file_name}")
-
-            except Exception as e:
-                print(f"Error reading {file_name}: {e}")
-    return None
