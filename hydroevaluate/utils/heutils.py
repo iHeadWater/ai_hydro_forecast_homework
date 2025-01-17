@@ -352,7 +352,9 @@ def calculate_metrics(observed_file_path, simulated_file_path, var_name, metrics
 
     # Load the data
     observed, simulated = load_data(observed_file_path, simulated_file_path, var_name)
-
+    valid_mask = ~np.isnan(observed) & ~np.isnan(simulated)
+    observed = observed[valid_mask]
+    simulated = simulated[valid_mask]
     # Calculate the metrics
     results = {}
     if "NSE" in metrics:
@@ -391,31 +393,44 @@ def load_data(observed_file_path, simulated_file_path, var_name):
     simulated : numpy.ndarray
         Simulated values for the variable.
     """
-    if observed_file_path.endswith(".csv") and simulated_file_path.endswith(".csv"):
-        observed_df = pd.read_csv(observed_file_path)
-        simulated_df = pd.read_csv(simulated_file_path)
+    if isinstance(observed_file_path, str) and isinstance(simulated_file_path, str):
+        if observed_file_path.endswith(".csv") and simulated_file_path.endswith(".csv"):
+            observed_df = pd.read_csv(observed_file_path)
+            simulated_df = pd.read_csv(simulated_file_path)
 
-        # Merge dataframes on 'time' column
-        time_column = "time" if "time" in observed_df.columns else "time_start"
-        observed_df[time_column] = pd.to_datetime(observed_df[time_column])
-        simulated_df[time_column] = pd.to_datetime(simulated_df[time_column])
-        merged_df = pd.merge(
-            observed_df, simulated_df, on=time_column, suffixes=("_obs", "_sim")
-        )
+            # Merge dataframes on 'time' column
+            time_column = "time" if "time" in observed_df.columns else "time_start"
+            observed_df[time_column] = pd.to_datetime(observed_df[time_column])
+            simulated_df[time_column] = pd.to_datetime(simulated_df[time_column])
+            merged_df = pd.merge(
+                observed_df, simulated_df, on=time_column, suffixes=("_obs", "_sim")
+            )
 
-        observed = merged_df[f"{var_name}_obs"].values
-        simulated = merged_df[f"{var_name}_sim"].values
+            observed = merged_df[f"{var_name}_obs"].values
+            simulated = merged_df[f"{var_name}_sim"].values
 
-    elif observed_file_path.endswith(".nc") and simulated_file_path.endswith(".nc"):
-        observed_ds = xr.open_dataset(observed_file_path)
-        simulated_ds = xr.open_dataset(simulated_file_path)
+        elif observed_file_path.endswith(".nc") and simulated_file_path.endswith(".nc"):
+            observed_ds = xr.open_dataset(observed_file_path)
+            simulated_ds = xr.open_dataset(simulated_file_path)
+
+            # Get variable data
+            observed = observed_ds[var_name].values
+            simulated = simulated_ds[var_name].values
+
+    elif isinstance(observed_file_path, xr.Dataset) and isinstance(
+        simulated_file_path, xr.Dataset
+    ):
+        observed_ds = observed_file_path
+        simulated_ds = simulated_file_path
 
         # Get variable data
         observed = observed_ds[var_name].values
         simulated = simulated_ds[var_name].values
-
-    else:
-        raise ValueError("Unsupported file format. Please provide CSV or NetCDF files.")
+    elif isinstance(observed_file_path, pd.DataFrame) and isinstance(
+        simulated_file_path, pd.DataFrame
+    ):
+        observed = observed_file_path[var_name].values
+        simulated = simulated_file_path[var_name].values
 
     return observed, simulated
 
