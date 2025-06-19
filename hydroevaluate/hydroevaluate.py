@@ -1,7 +1,7 @@
 """
 Author: Shuolong Xu
 Date: 2024-05-30 09:11:04
-LastEditTime: 2025-01-12 18:44:06
+LastEditTime: 2025-06-19 16:19:52
 LastEditors: Wenyu Ouyang
 Description: main function for hydroevaluate
 FilePath: \hydroevaluate\hydroevaluate\hydroevaluate.py
@@ -29,7 +29,6 @@ from torchhydro.trainers.train_utils import (
 )
 from torchhydro.models.model_utils import get_the_device
 from torchhydro.datasets.data_dict import datasets_dict
-from torchhydro.trainers.train_utils import rolling_evaluate
 from hydroevaluate.dataloader.hydrodataloader import DataloaderForHydroModel
 from hydroevaluate.modelloader.model_loader import ModelLoader
 from hydroevaluate.configs.config import DEFAULT_cfgs

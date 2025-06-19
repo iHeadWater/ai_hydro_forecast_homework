@@ -5,10 +5,9 @@ channels:
   - defaults
 dependencies:
   - python=3.11
-  - pytorch<2.5
+  - pytorch
   - tensorboard
   - torchvision
-  - pytorch-cuda<12.2
   - pytest
   - black
   - flake8

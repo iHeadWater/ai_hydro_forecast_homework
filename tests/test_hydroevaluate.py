@@ -1,7 +1,7 @@
 """
 Author: Wenyu Ouyang
 Date: 2024-05-30 09:11:04
-LastEditTime: 2024-06-02 11:47:39
+LastEditTime: 2025-06-19 16:20:48
 LastEditors: Wenyu Ouyang
 Description: Test cases for EvalDeepHydro
 FilePath: \hydroevaluate\tests\test_hydroevaluate.py
@@ -13,7 +13,6 @@ import os
 import numpy as np
 import pandas as pd
 import xarray as xr
-from hydroevaluate.dataloader.data_source import CustomDataSourceForTorchHydro
 from hydroevaluate.hydroevaluate import EvalDeepHydro, EvalHydroModel
 from hydroevaluate.configs.config import (
     DEFAULT_cfgs,
@@ -110,7 +109,7 @@ def test_model_infer():
     print(pred)
 
 
-class MockDataSource(CustomDataSourceForTorchHydro):
+class MockDataSource():
     """
     Custom implementation of SelfMadeDataSource that provides fake data with required attributes.
     """
