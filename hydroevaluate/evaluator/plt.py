@@ -4,8 +4,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from matplotlib.font_manager import FontProperties
-import sys
-sys.path.append("/home/zlh/hydrodatasource")
 
 from hydroutils.hydro_plot import plot_rainfall_runoff
 from hydrodatasource.reader.data_source import SelfMadeHydroDataset
