@@ -100,7 +100,7 @@ def test_flood_peak_time_bias(setup_eval_test_data):
     if hasattr(end_time, "to_datetime64"):
         end_time = end_time.to_datetime64()
     bias = flood_peak_time_bias(pred_path, obs_path, start_time=start_time, end_time=end_time)
-    assert bias == 1.0
+    assert abs(bias) == 1.0
 
 
 def test_calculate_flood_forecast_qualification_rate(setup_eval_test_data):

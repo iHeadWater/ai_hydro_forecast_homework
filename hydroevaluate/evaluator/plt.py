@@ -271,12 +271,12 @@ def plot_flood_event(
             title=title,
             ylabel=f"{flow_var} (m^3/s)",
             prcp_ylabel=f"{precip_var} (mm)",
-            leg_lst=["Obs", "Pred"],
+            leg_lst=["obs", "pred"],
         )
     else:
         plt.figure(figsize=(12, 6))
-        plt.plot(time_coords, obs_flow, label="Obs")
-        plt.plot(time_coords, pred_flow, label="Pred", linestyle="--")
+        plt.plot(time_coords, obs_flow, label="obs")
+        plt.plot(time_coords, pred_flow, label="pred", linestyle="--")
         plt.xlabel("Time")
         plt.ylabel(f"{flow_var} (m^3/s)")
         plt.title(title)

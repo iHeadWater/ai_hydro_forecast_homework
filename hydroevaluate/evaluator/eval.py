@@ -140,7 +140,7 @@ def flood_peak_bias(
 
     pred_peak = np.max(flow_pred[mask])
     obs_peak = np.max(flow_obs[mask])
-    return np.nan if obs_peak == 0 else np.abs(pred_peak - obs_peak) / obs_peak
+    return np.nan if obs_peak == 0 else (pred_peak - obs_peak) / obs_peak
 
 
 def flood_peak_time_bias(
@@ -152,7 +152,7 @@ def flood_peak_time_bias(
     end_time=None,
 ):
     """
-    计算单场洪水预报峰现时间偏差的绝对值。
+    计算单场洪水预报峰现时间偏差。
     参数：
         pred_nc_file: 预报nc文件路径
         obs_nc_file: 实测nc文件路径
@@ -161,7 +161,7 @@ def flood_peak_time_bias(
         start_time: 洪水开始时间（必须指定）
         end_time: 洪水结束时间（必须指定）
     返回：
-        peak_time_bias: 预报洪峰出现时间与实测洪峰出现时间的绝对差值（单位：天，若为小时数据则为小时）
+        peak_time_bias: 预报洪峰出现时间与实测洪峰出现时间的差值（单位：天，若为小时数据则为小时）
     """
     time_var = "time"
     if start_time is None or end_time is None:
@@ -183,7 +183,7 @@ def flood_peak_time_bias(
     obs_peak_idx = np.argmax(obs_flow_sel)
     pred_peak_time = times_sel[pred_peak_idx]
     obs_peak_time = times_sel[obs_peak_idx]
-    return np.abs((pred_peak_time - obs_peak_time) / np.timedelta64(1, "D"))
+    return (pred_peak_time - obs_peak_time) / np.timedelta64(1, "D")
 
 
 def flood_volume_bias(
@@ -221,7 +221,7 @@ def flood_volume_bias(
     obs_volume = np.sum(obs_flow[mask])
     if obs_volume == 0:
         return np.nan
-    return np.abs(pred_volume - obs_volume) / obs_volume
+    return (pred_volume - obs_volume) / obs_volume
 
 
 def calculate_flood_forecast_qualification_rate(
@@ -313,7 +313,7 @@ def calculate_flood_forecast_qualification_rate(
             is_qualified = (
                 abs(peak_bias) <= peak_bias_threshold
                 and abs(volume_bias) <= volume_bias_threshold
-                and peak_time_bias <= peak_time_bias_threshold
+                and abs(peak_time_bias) <= peak_time_bias_threshold
             )
 
         results.append(
@@ -371,4 +371,5 @@ def test_flood_event():
     flow_var="inflow",
     precip_var=None,
     title=None)
+
 test_flood_event()
