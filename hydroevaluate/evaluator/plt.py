@@ -4,8 +4,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from matplotlib.font_manager import FontProperties
+import sys
+sys.path.append("/home/zlh/hydrodatasource")
+
 from hydroutils.hydro_plot import plot_rainfall_runoff
-#from torchhydro import CACHE_DIR
+from hydrodatasource.reader.data_source import SelfMadeHydroDataset
+
+# from torchhydro import CACHE_DIR
 
 
 def load_user_font():
@@ -176,7 +181,7 @@ def plot_predobs_with_tp(
         title_name = f"{target_basin_id}_tp_{pred_colunm}"
         ylabel = f"{pred_colunm} {var_unit}"
         tp_ylabel = f"Precipitation {tp_unit}"
-        plot_rainfall_runoff(
+        fig, ax = plot_rainfall_runoff(
             time,
             precip,
             [obs, pred],
@@ -186,102 +191,132 @@ def plot_predobs_with_tp(
             prcp_ylabel=tp_ylabel,
             leg_lst=["Observation", "Prediction"],
         )
+        ax.tick_params(axis='x', rotation=45)
+        ax.legend(loc='upper right', fontsize=14)
+        fig.tight_layout()
+        fig.savefig(f"{output_folder}/{target_basin_id}_{pred_colunm}.png")
+        plt.close(fig)
 
-        plt.savefig(f"{output_folder}/{target_basin_id}_{pred_colunm}.png")
+        ax.set_ylabel(ylabel, fontsize=14)
+        # 如果plot_rainfall_runoff返回了ax2
+        ax2 = ax.twinx()
+        ax2.set_ylabel(tp_ylabel, fontsize=14)
 
         obs_nc.close()
     else:
         print(f"{target_basin_id} not found in {obs_nc}")
 
 
-def plot_flood_event(
-    pred_nc_file,
-    obs_nc_file,
-    output_path,
-    start_time,
-    end_time,
-    basin_index=0,
-    flow_var="inflow",
-    precip_var=None,
-    title=None,
+def plot_predobs_with_tp_hydro(
+    target_basin_id,
+    output_folder,
+    pred_nc,
+    obs_nc,
+    data_path,
+    pred_colunm,
+    precip_var,
+    time_unit,
+    time_range=None,
+    trans_unit=True,
 ):
     """
-    绘制单场洪水事件的预报与观测流量过程线，并可选择性地附带降雨过程图。
-
-    本函数专门用于可视化指定的单场洪水，对比模型预报和实测流量。
+    基于Hydro格式数据集自动读取流域信息和降雨数据，绘制指定流域的预报与观测流量过程线，并附带降雨过程图。
 
     参数:
     ----------
-    pred_nc_file : str
-        包含预报数据的nc文件路径。
-    obs_nc_file : str
-        包含观测数据的nc文件路径。
-    output_path : str
-        生成的图像文件的完整保存路径 (包括文件名, e.g., 'output/event_1.png')。
-    start_time : str or datetime
-        洪水事件的开始时间。
-    end_time : str or datetime
-        洪水事件的结束时间。
-    basin_index : int, optional
-        目标流域的索引，默认为 0。
-    flow_var : str, optional
-        nc文件中代表流量的变量名称，默认为 'inflow'。
-    precip_var : str, optional
-        nc文件中代表降雨的变量名称。如果提供，将在图上方绘制降雨过程。默认为 None。
-    title : str, optional
-        图像的标题。默认为 None，将自动生成标题。
-
-    返回:
-    -------
-    None
-        此函数没有返回值，但会将生成的图像以png格式保存到指定的 `output_path`。
+    target_basin_id : str
+        目标流域的ID。
+    output_folder : str
+        输出图片文件夹。
+    pred_nc : xr.Dataset or str
+        预报数据nc文件或xarray对象。
+    obs_nc : xr.Dataset or str
+        观测数据nc文件或xarray对象。
+    data_path : str
+        Hydro格式数据集根目录。
+    pred_colunm : str
+        预报/观测流量变量名。
+    precip_var : str
+        nc文件中代表降雨的变量名称。
+    time_unit : str
+        时间单位（如'1D'）。
+    time_range : tuple, optional
+        (起始时间, 结束时间)。
+    trans_unit : bool, optional
+        是否单位换算为m³/s。
     """
     load_user_font()
-
-    # 读取数据
-    pred_ds = xr.open_dataset(pred_nc_file)
-    obs_ds = xr.open_dataset(obs_nc_file)
-
-    # 筛选时间和流域
-    pred_event_ds = pred_ds.sel(time=slice(start_time, end_time)).isel(
-        basin=basin_index
+    # 1. 读取Hydro数据集，获取流域属性
+    dataset = SelfMadeHydroDataset(
+        data_path=data_path,
+        time_unit=[time_unit],
+        offset_to_utc=True,
     )
-    obs_event_ds = obs_ds.sel(time=slice(start_time, end_time)).isel(basin=basin_index)
-
-    time_coords = obs_event_ds["time"].values
-    pred_flow = pred_event_ds[flow_var].values
-    obs_flow = obs_event_ds[flow_var].values
-
-    if title is None:
-        title = f"Flood Event: {pd.to_datetime(start_time).strftime('%Y-%m-%d')} to {pd.to_datetime(end_time).strftime('%Y-%m-%d')}"
-
-    # 检查输出目录是否存在
-    output_dir = os.path.dirname(output_path)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    # 绘图
-    if precip_var and precip_var in obs_event_ds:
-        precip = obs_event_ds[precip_var].values
-        plot_rainfall_runoff(
-            time_coords,
-            precip,
-            [obs_flow, pred_flow],
-            fig_size=(10, 6),
-            title=title,
-            ylabel=f"{flow_var} (m^3/s)",
-            prcp_ylabel=f"{precip_var} (mm)",
-            leg_lst=["obs", "pred"],
-        )
+    attrs = dataset.read_site_info()  # DataFrame，含basin_id、area等
+    station_dict = attrs.set_index("basin_id")[["area"]].to_dict(orient="index")
+    # 2. 读取降雨数据
+    if time_range is not None:
+        time_start, time_end = time_range
     else:
-        plt.figure(figsize=(12, 6))
-        plt.plot(time_coords, obs_flow, label="obs")
-        plt.plot(time_coords, pred_flow, label="pred", linestyle="--")
-        plt.xlabel("Time")
-        plt.ylabel(f"{flow_var} (m^3/s)")
-        plt.title(title)
-        plt.legend()
-        plt.grid(True)
+        # 自动获取nc文件时间范围
+        obs_ds = xr.open_dataset(obs_nc) if isinstance(obs_nc, str) else obs_nc
+        times = obs_ds["time"].values
+        time_start = pd.to_datetime(times[0])
+        time_end = pd.to_datetime(times[-1])
+    precip_data = dataset.read_timeseries(
+        object_ids=[target_basin_id],
+        t_range_list=[time_start, time_end],
+        relevant_cols=[precip_var]
+    )
+    precip = precip_data[time_unit][0, :, 0]
+    # 3. 读取流量数据
+    obs_ds = xr.open_dataset(obs_nc) if isinstance(obs_nc, str) else obs_nc
+    pred_ds = xr.open_dataset(pred_nc) if isinstance(pred_nc, str) else pred_nc
+    obs = obs_ds.sel(basin=target_basin_id)[pred_colunm].sel(time=slice(time_start, time_end))
+    pred = pred_ds.sel(basin=target_basin_id)[pred_colunm].sel(time=slice(time_start, time_end))
+    time = obs["time"].values
+    # 4. 单位换算
+    basin_area = station_dict[target_basin_id]["area"] if target_basin_id in station_dict else None
+    if trans_unit and basin_area is not None:
+        if time_unit == "1D":
+            obs_hourly = obs / 24
+            obs = obs_hourly * basin_area / 3.6
+            pred_hourly = pred / 24
+            pred = pred_hourly * basin_area / 3.6
+        elif time_unit == "3h":
+            obs_hourly = obs / 3
+            obs = obs_hourly * basin_area / 3.6
+            pred_hourly = pred / 3
+            pred = pred_hourly * basin_area / 3.6
+        else:  # time_unit == '1h'
+            obs = obs * basin_area / 3.6
+            pred = pred * basin_area / 3.6
+        var_unit = "m^3/s"
+    else:
+        var_unit = "mm/" + time_unit
+    # 5. 绘图
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    title_name = f"{target_basin_id}_tp_{pred_colunm}"
+    ylabel = f"{pred_colunm} {var_unit}"
+    tp_ylabel = f"Precipitation mm/{time_unit}"
+    fig, ax = plot_rainfall_runoff(
+        time,
+        precip,
+        [obs, pred],
+        fig_size=(16, 9),
+        title=title_name,
+        ylabel=ylabel,
+        prcp_ylabel=tp_ylabel,
+        leg_lst=["obs", "pred"],
+        linewidth=1, # 设置线宽
+        prcp_interval=20,# 设置降雨间隔
+    )
 
-    plt.savefig(output_path)
-    plt.close()
+    ax.tick_params(axis='x', rotation=45)
+    ax.legend(loc='upper right', fontsize=24) # 图例
+    fig.tight_layout()
+    fig.savefig(f"{output_folder}/{target_basin_id}_{pred_colunm}.png")
+    plt.close(fig)
+
+    

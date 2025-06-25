@@ -1,7 +1,7 @@
 '''
 Author: zhuanglaihong
 Date: 2025-06-24 16:42:48
-LastEditTime: 2025-06-24 19:36:27
+LastEditTime: 2025-06-25 15:16:22
 LastEditors: zhuanglaihong
 Description: 
 FilePath: /zlh/hydroevaluate/tests/test_plt.py
@@ -66,3 +66,98 @@ def test_plot_flood_event(tmp_path, setup_plot_test_data):
     assert os.path.exists(output_path)
     # 检查文件大小大于0
     assert os.path.getsize(output_path) > 0
+
+def plot_flood_event(
+    pred_nc_file,
+    obs_nc_file,
+    output_path,
+    data_path,
+    start_time,
+    end_time,
+    basin_name,
+    flow_var="inflow",
+    time_unit="1D",
+    title=None,
+):
+    """
+    绘制一个流域单场洪水事件的预报与观测流量过程线，并叠加降雨过程线。
+
+    参数:
+    ----------
+    pred_nc_file : str
+        包含预报数据的nc文件路径。
+    obs_nc_file : str
+        包含观测数据的nc文件路径。
+    output_path : str
+        生成的图像文件的完整保存路径 (包括文件名, e.g., 'output/event_1.png')。
+    data_path : str
+        Hydro格式的数据集路径。
+    start_time : str or datetime
+        洪水事件的开始时间。
+    end_time : str or datetime
+        洪水事件的结束时间。
+    basin_name : str
+        流域名称.
+    flow_var : str, optional
+        nc文件中代表流量的变量名称，默认为 'inflow'。
+    time_unit : str
+        时间单位。
+    title : str, optional
+        图像的标题。默认为 None，将自动生成标题。
+
+    返回:
+    -------
+    None
+        此函数没有返回值，但会将生成的图像以png格式保存到指定的 `output_path`。
+    """
+    load_user_font()
+
+    # 读取数据
+    pred_ds = xr.open_dataset(pred_nc_file)
+    obs_ds = xr.open_dataset(obs_nc_file)
+
+    dataset = SelfMadeHydroDataset(
+        data_path=data_path,
+        time_unit=[time_unit],
+        offset_to_utc=True,  # 必须加，不加为空值
+    )
+
+    # 筛选时间和流域
+    pred_event_ds = pred_ds.sel(time=slice(start_time, end_time), basin=basin_name)
+    obs_event_ds = obs_ds.sel(time=slice(start_time, end_time), basin=basin_name)
+
+    time_coords = obs_event_ds["time"].values
+    pred_flow = pred_event_ds[flow_var].values
+    obs_flow = obs_event_ds[flow_var].values
+
+    # 读取降雨数据（假设变量名为rain，且为mm单位）
+    precip_data = dataset.read_timeseries(
+        object_ids=[basin_name],
+        t_range_list=[start_time, end_time],
+        relevant_cols=["rain"],
+    )
+    # 获取降雨序列
+    precip = precip_data[time_unit][0, :, 0]  # [流域索引, 时间, 变量索引]
+
+    if title is None:
+        title = f"Flood Event: {pd.to_datetime(start_time).strftime('%Y-%m-%d')} to {pd.to_datetime(end_time).strftime('%Y-%m-%d')}"
+
+    # 检查输出目录是否存在
+    output_dir = os.path.dirname(output_path)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # Plot rainfall-runoff comparison figure
+    plot_rainfall_runoff(
+        time_coords,
+        precip,
+        [obs_flow, pred_flow],
+        fig_size=(10, 6),
+        title=title,
+        ylabel=f"{flow_var}(m^3/s)",
+        prcp_ylabel="Precipitation (mm)",
+        leg_lst=["observed flow", "predicted flow"],
+    )
+
+    plt.savefig(output_path)
+    plt.close()

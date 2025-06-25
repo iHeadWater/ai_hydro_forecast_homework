@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from hydroevaluate.evaluator.plt import plot_flood_event
+from hydroevaluate.evaluator.plt import  plot_predobs_with_tp_hydro
 
 
 def read_rainfall_events_summary(csv_file_path):
@@ -64,7 +64,7 @@ def cal_runoff_coefficient(xrds, prcp_col, flow_col):
 
 def flood_event_split(
     nc_file_path,
-    basin_index=0,
+    basin_name,
     threshold=0.01,
     flood_var="flood_event",
     time_var="time",
@@ -73,7 +73,7 @@ def flood_event_split(
     划分洪水场次，返回每个场次的起始和终止时间（datetime格式）。
     参数：
         nc_file_path: nc文件路径
-        basin_index: 选择的流域索引（如果有多个流域）
+        basin_name: 选择的流域名称（字符串，需与nc文件中的basin坐标一致）
         threshold: 判定洪水的阈值
         flood_var: 洪水事件变量名
         time_var: 时间变量名
@@ -81,7 +81,8 @@ def flood_event_split(
         flood_periods: list，每场洪水的(起始时间, 终止时间)元组，均为datetime类型
     """
     ds = xr.open_dataset(nc_file_path)
-    flood = ds[flood_var].isel(basin=basin_index).values
+    # 直接用流域名索引
+    flood = ds[flood_var].sel(basin=basin_name).values
     times = ds[time_var].values
     times_dt = pd.to_datetime(times)
     flood_periods = []
@@ -107,7 +108,7 @@ def flood_event_split(
 def flood_peak_bias(
     pred_nc_file_path,
     obs_nc_file_path,
-    basin_index=0,
+    basin_name,
     flow_var="inflow",
     start_time=None,
     end_time=None,
@@ -117,7 +118,7 @@ def flood_peak_bias(
     参数：
         pred_nc_file_path: 预报nc文件路径
         obs_nc_file_path: 实测nc文件路径
-        basin_index: 选择的流域索引（如果有多个流域）
+        basin_name: 选择的流域名称（字符串，需与nc文件中的basin坐标一致）
         flow_var: 流量变量名（预报和实测一致）
         start_time: 分析的起始时间（必须指定）
         end_time: 分析的终止时间（必须指定）
@@ -128,8 +129,8 @@ def flood_peak_bias(
     ds_pred = xr.open_dataset(pred_nc_file_path)
     ds_obs = xr.open_dataset(obs_nc_file_path)
     times = ds_pred[time_var].values
-    flow_pred = ds_pred[flow_var].isel(basin=basin_index).values
-    flow_obs = ds_obs[flow_var].isel(basin=basin_index).values
+    flow_pred = ds_pred[flow_var].sel(basin=basin_name).values
+    flow_obs = ds_obs[flow_var].sel(basin=basin_name).values
 
     if start_time is None or end_time is None:
         raise ValueError("请输入start_time和end_time用于单场洪水分析。")
@@ -146,7 +147,7 @@ def flood_peak_bias(
 def flood_peak_time_bias(
     pred_nc_file,
     obs_nc_file,
-    basin_index=0,
+    basin_name,
     flow_var="inflow",
     start_time=None,
     end_time=None,
@@ -156,7 +157,7 @@ def flood_peak_time_bias(
     参数：
         pred_nc_file: 预报nc文件路径
         obs_nc_file: 实测nc文件路径
-        basin_index: 选择的流域索引（如果有多个流域）
+        basin_name: 选择的流域名称（字符串，需与nc文件中的basin坐标一致）
         flow_var: 流量变量名
         start_time: 洪水开始时间（必须指定）
         end_time: 洪水结束时间（必须指定）
@@ -169,8 +170,8 @@ def flood_peak_time_bias(
     pred_ds = xr.open_dataset(pred_nc_file)
     obs_ds = xr.open_dataset(obs_nc_file)
     times = pred_ds[time_var].values
-    pred_flow = pred_ds[flow_var].isel(basin=basin_index).values
-    obs_flow = obs_ds[flow_var].isel(basin=basin_index).values
+    pred_flow = pred_ds[flow_var].sel(basin=basin_name).values
+    obs_flow = obs_ds[flow_var].sel(basin=basin_name).values
     mask = (times >= start_time) & (times <= end_time)
     if not np.any(mask):
         return np.nan
@@ -189,7 +190,7 @@ def flood_peak_time_bias(
 def flood_volume_bias(
     pred_nc_file,
     obs_nc_file,
-    basin_index=0,
+    basin_name,
     flow_var="inflow",
     start_time=None,
     end_time=None,
@@ -199,7 +200,7 @@ def flood_volume_bias(
     参数：
         pred_nc_file: 预报nc文件路径
         obs_nc_file: 实测nc文件路径
-        basin_index: 选择的流域索引（如果有多个流域）
+        basin_name: 选择的流域名称（字符串，需与nc文件中的basin坐标一致）
         flow_var: 流量变量名
         start_time: 洪水开始时间（必须指定）
         end_time: 洪水结束时间（必须指定）
@@ -212,8 +213,8 @@ def flood_volume_bias(
     pred_ds = xr.open_dataset(pred_nc_file)
     obs_ds = xr.open_dataset(obs_nc_file)
     times = pred_ds[time_var].values
-    pred_flow = pred_ds[flow_var].isel(basin=basin_index).values
-    obs_flow = obs_ds[flow_var].isel(basin=basin_index).values
+    pred_flow = pred_ds[flow_var].sel(basin=basin_name).values
+    obs_flow = obs_ds[flow_var].sel(basin=basin_name).values
     mask = (times >= start_time) & (times <= end_time)
     if not np.any(mask):
         return np.nan
@@ -227,7 +228,7 @@ def flood_volume_bias(
 def calculate_flood_forecast_qualification_rate(
     pred_nc_file,
     obs_nc_file,
-    basin_index=0,
+    basin_name,
     flow_var="inflow",
     flood_var="flood_event",
     time_var="time",
@@ -247,7 +248,7 @@ def calculate_flood_forecast_qualification_rate(
     参数:
         pred_nc_file (str): 预报nc文件路径.
         obs_nc_file (str): 实测nc文件路径.
-        basin_index (int): 流域索引.
+        basin_name (str): 流域名称.
         flow_var (str): 流量变量名.
         flood_var (str): 划分洪水场次的事件变量名.
         time_var (str): 时间变量名.
@@ -257,14 +258,15 @@ def calculate_flood_forecast_qualification_rate(
         peak_time_bias_threshold (float): 峰现时间偏差合格阈值 (单位:天).
 
     返回:
-        tuple: (qualification_rate, results_df)
+        tuple: (qualification_rate, results_df, avg_relative_error_level)
             - qualification_rate (float): 合格率 (%).
             - results_df (pd.DataFrame): 包含每场洪水各项指标的详细表格.
+            - avg_relative_error_level (float): 平均相对误差水平.
     """
     # 1. 划分洪水场次
     flood_periods = flood_event_split(
         pred_nc_file,
-        basin_index=basin_index,
+        basin_name=basin_name,
         threshold=split_threshold,
         flood_var=flood_var,
         time_var=time_var,
@@ -272,7 +274,7 @@ def calculate_flood_forecast_qualification_rate(
 
     if not flood_periods:
         print("未划分出任何洪水场次。")
-        return 0.0, pd.DataFrame()
+        return 0.0, pd.DataFrame(), 0.0
 
     results = []
 
@@ -281,7 +283,7 @@ def calculate_flood_forecast_qualification_rate(
         peak_bias = flood_peak_bias(
             pred_nc_file,
             obs_nc_file,
-            basin_index=basin_index,
+            basin_name=basin_name,
             flow_var=flow_var,
             start_time=start_time,
             end_time=end_time,
@@ -289,7 +291,7 @@ def calculate_flood_forecast_qualification_rate(
         volume_bias = flood_volume_bias(
             pred_nc_file,
             obs_nc_file,
-            basin_index=basin_index,
+            basin_name=basin_name,
             flow_var=flow_var,
             start_time=start_time,
             end_time=end_time,
@@ -297,7 +299,7 @@ def calculate_flood_forecast_qualification_rate(
         peak_time_bias = flood_peak_time_bias(
             pred_nc_file,
             obs_nc_file,
-            basin_index=basin_index,
+            basin_name=basin_name,
             flow_var=flow_var,
             start_time=start_time,
             end_time=end_time,
@@ -338,38 +340,37 @@ def calculate_flood_forecast_qualification_rate(
     # 5. 计算平均相对误差水平
     avg_relative_error_level = 1 - results_df["peak_bias"].abs().mean()
 
-    return qualification_rate, results_df,avg_relative_error_level
+    return qualification_rate, results_df, avg_relative_error_level
 
 
 def test_flood_event():
     """
     测试洪水预报合格率
     """
-    pred_nc_file="/home/zlh/hydroevaluate/data/epoch100flow_pred.nc"
-    obs_nc_file="/home/zlh/hydroevaluate/data/epoch100flow_obs.nc"
-    basin_index = 0
+    pred_nc_file = "/home/zlh/hydroevaluate/data/epoch100flow_pred.nc"
+    obs_nc_file = "/home/zlh/hydroevaluate/data/epoch100flow_obs.nc"
+    basin_name = "songliao_20800900"
 
-    rate, df , avg_relative_error_level= calculate_flood_forecast_qualification_rate(
+    rate, df, avg_relative_error_level = calculate_flood_forecast_qualification_rate(
         pred_nc_file,
         obs_nc_file,
-        basin_index=basin_index,
+        basin_name=basin_name,
     )
     print(f"预报合格率: {rate:.2f}%")
     print("详细指标表格:")
     print(df)
     print(f"平均相对误差水平: {avg_relative_error_level:.2f}")
 
-
-    # 绘制图表
-    plot_flood_event(
-    pred_nc_file,
-    obs_nc_file,
-    output_path="/home/zlh/hydroevaluate/data/flow_pred.png",
-    start_time=df["start_time"].iloc[2],
-    end_time=df["end_time"].iloc[2],
-    basin_index=0,
-    flow_var="inflow",
-    precip_var=None,
-    title=None)
+    plot_predobs_with_tp_hydro(
+    target_basin_id=basin_name,
+    output_folder="/home/zlh/hydroevaluate/data/",
+    pred_nc= pred_nc_file,
+    obs_nc= obs_nc_file,
+    data_path="/home/zlh/HydroDataCompiler/data/songliaorrevent/songliaorrevent",
+    precip_var= "rain",
+    pred_colunm= "inflow",
+    time_unit= "1D",
+    time_range=(df["start_time"].iloc[0], df["end_time"].iloc[0]),
+)
 
 test_flood_event()
