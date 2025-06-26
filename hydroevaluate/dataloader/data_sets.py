@@ -101,6 +101,8 @@ class Seq2SeqDatasetForEval(Seq2SeqDataset):
         else:
             x_origin = None
 
+        # temp use
+        x_origin[0] = x_origin[0] * 1
         if self.data_cfgs["constant_vars"]:
             data_attr_ds = self.data_source.read_attr_xrdataset(
                 self.data_cfgs["object_ids"],

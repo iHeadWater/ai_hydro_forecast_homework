@@ -32,24 +32,25 @@ def test_load_config():
 
 def test_model_infer_with_cmd():
     cfg_file = default_config_file()
-    # gage_ids = pd.read_csv("data/basin_id(819).csv", dtype={"id": str})[
-    #     "id"
-    # ].values.tolist()
+    gage_ids = pd.read_csv(
+        "/home/xushuolong1/hydro/hydroevaluate/data/camels_id.csv", dtype={"id": str}
+    )["id"].values.tolist()
     args = cmd(
-        data_dir=r"C:\data\data_817",
-        object_ids=[
-            "songliao_21401550",
-            "songliao_21401050",
-            "camels_01013500",
-            "camels_01022500",
-        ],
-        t_range_test=[("2021-06-01-01", "2021-11-01-01")],
+        data_dir="/ftproot/basins-interim",
+        # object_ids=[
+        #     # "songliao_21401550",
+        #     # "songliao_21401050",
+        #     # "camels_01013500",
+        #     "camels_04056500",
+        # ],
+        object_ids=gage_ids,
+        t_range_test=[("2023-06-01-01", "2023-11-01-01")],
         download=True,
         # pth_path="/home/xushuolong1/hydro/hydroevaluate/data/model_v101/best_model.pth",
         # stat_file_path="/home/xushuolong1/hydro/hydroevaluate/data/model_v101/dapengscaler_stat.json",
-        local_dir=r"C:\Programming\hydro\hydroevaluate\data\model",
+        local_dir="/home/xushuolong1/hydro/hydroevaluate/data/model_test",
         model_type="torchhydro",
-        device=[-1],
+        device=[0],
         model_name="Seq2Seq",
         horizon=8,
         rolling=8,
@@ -80,17 +81,19 @@ def test_model_infer_with_cmd():
             "output_size": 2,
             "hidden_size": 256,
             "forecast_length": 8,
-            "prec_window": 1,
+            "hindcast_output_window": 1,
             "teacher_forcing_ratio": 0.5,
         },
         revision="v1.0.1",
-        api="",
+        api="7f03a609-cec7-4395-b328-7c7ec1264190",
     )
     update_cfg(cfg_file, args)
     eval_deep_hydro = EvalDeepHydro(cfg_file)
     pred = eval_deep_hydro.model_infer()
     print(pred)
-    pred.to_netcdf(r"C:\Programming\hydro\hydroevaluate\result\test_21\test.nc")
+    pred.to_netcdf(
+        "/home/xushuolong1/hydro/hydroevaluate/results/test_1_tp/camels_04056500.nc"
+    )
 
 
 def test_model_infer():
