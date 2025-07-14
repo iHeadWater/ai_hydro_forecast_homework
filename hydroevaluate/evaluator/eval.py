@@ -330,6 +330,13 @@ def calc_flood_metrics(
     # 计算指标（举例，实际可自定义）
     import numpy as np
 
+    if len(obs) == 0 or len(pred) == 0:
+        print(f'{basin_id}流域的{time_range}场次数据为0')
+        return {
+            "Peak bias": np.nan,
+            "Volume bias": np.nan,
+            "Peak time error": np.nan,
+        }
     peak_bias = (
         (np.max(pred) - np.max(obs)) / np.max(obs) if np.max(obs) != 0 else np.nan
     )
@@ -340,8 +347,7 @@ def calc_flood_metrics(
         (times[np.argmax(pred)] - times[np.argmax(obs)])
         .astype("timedelta64[h]")
         .astype(float)
-        if len(times) > 0
-        else np.nan
+        if len(times) > 0 else np.nan
     )
     return {
         "Peak bias": peak_bias,
@@ -607,7 +613,24 @@ def plot_flood_event():
                 time_range=(start_time, end_time),
                 file_type="nc"
             )
-            # 4. 组装metrics_dict
+
+            # 检查是否有有效数据
+            if (
+                np.isnan(metrics["Peak bias"])
+                and np.isnan(metrics["Volume bias"])
+                and np.isnan(metrics["Peak time error"])
+            ):
+                print(f"{params['basin_name']} {start_time}-{end_time} 无有效数据，跳过绘图。")
+                continue
+            if (
+                np.isnan(regional_metrics["Peak bias"])
+                and np.isnan(regional_metrics["Volume bias"])
+                and np.isnan(regional_metrics["Peak time error"])
+            ):
+                print(f"{params['basin_name']} {start_time}-{end_time} 区域模型无有效数据，跳过绘图。")
+                continue
+
+            # 4. 组装metrics_dict并绘图
             metrics_dict = {
                 "individual": {
                     "Peak bias": metrics["Peak bias"],

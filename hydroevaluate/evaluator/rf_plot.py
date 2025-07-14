@@ -370,6 +370,7 @@ def plot_with_individual_regional(
     except Exception as e:
         print(f"无法自动获取流域面积: {e}")
         basin_area = None
+        
     # 2. 读取降雨数据
     precip = None
     try:
@@ -394,6 +395,7 @@ def plot_with_individual_regional(
             raise ValueError("不支持的降雨数据文件类型")
     except Exception as e:
         print(f"降雨数据读取失败: {e}")
+
     # 3. 读取流量数据
     obs_df = read_flow_data(
         obs_nc, target_basin_id, pred_colunm, time_range, file_type="nc"
@@ -407,10 +409,10 @@ def plot_with_individual_regional(
             regional_nc, target_basin_id, pred_colunm, time_range, file_type="nc"
         )
 
-    obs = obs_df['flow']
-    pred = pred_df['flow']
+    obs = obs_df.set_index('time')['flow']
+    pred = pred_df.set_index('time')['flow']
     if regional_pred_df is not None:
-        regional_pred = regional_pred_df['flow']
+        regional_pred = regional_pred_df.set_index('time')['flow']
     else:
         regional_pred = None
 
@@ -422,13 +424,42 @@ def plot_with_individual_regional(
             regional_pred, basin_area, time_unit, trans_unit
         )
     # 5. 组装数据
-    time = obs.index if hasattr(obs, "index") else obs["time"]
-    flow_list = [obs, pred]
+    # 自动对齐时间序列：以最短的为主，多的用最近邻插值
+    # 先获取所有时间序列
+    time_obs = obs_df['time']
+    time_precip = precip['time']
+    time_pred = pred_df['time']
+    if regional_pred_df is not None:
+        time_regional = regional_pred_df['time']
+    else:
+        time_regional = time_pred
+
+    # 找到最短的时间序列
+    time_lens = [len(time_obs), len(time_precip), len(time_pred)]
+    if regional_pred_df is not None:
+        time_lens.append(len(time_regional))
+    min_len = min(time_lens)
+    # 以最短的为主
+    time_candidates = [time_obs, time_precip, time_pred]
+    if regional_pred_df is not None:
+        time_candidates.append(time_regional)
+    # 取最短的时间序列
+    min_time = min(time_candidates, key=len)
+    # 以min_time为主，对齐所有数据
+    obs_aligned = obs.reindex(index=min_time, method='nearest')
+    pred_aligned = pred.reindex(index=min_time, method='nearest')
+    precip_aligned = precip.set_index('time')['precip'].reindex(index=min_time, method='nearest')
+    if regional_pred_df is not None:
+        regional_aligned = regional_pred.reindex(index=min_time, method='nearest')
+    else:
+        regional_aligned = None
+    time = min_time
+    flow_list = [obs_aligned, pred_aligned]
     leg_list = ["obs", "individual pred"]
     color_list = ["green", "blue"]
     linestyle_list = ["-", "--"]
-    if regional_pred is not None:
-        flow_list.append(regional_pred)
+    if regional_aligned is not None:
+        flow_list.append(regional_aligned)
         leg_list.append("regional pred")
         color_list.append("red")
         linestyle_list.append("--")
@@ -440,7 +471,7 @@ def plot_with_individual_regional(
     tp_ylabel = f"Precipitation mm/{time_unit}"
     fig, ax = plot_rainfall_runoff(
         time,
-        precip['precip'],  
+        precip_aligned,
         flow_list,
         fig_size=(16, 9),
         title=title_name,
@@ -460,6 +491,7 @@ def plot_with_individual_regional(
         add_metrics_to_figure(fig, legend, metrics_dict)
     # 8. 保存
     fig.savefig(f"{output_folder}/{title_name}.png")
+    print(f"图片已保存至: {output_folder}/{title_name}.png")
     plt.close(fig)
 
 
