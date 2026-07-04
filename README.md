@@ -1,244 +1,100 @@
-<!--
- * @Author: Wenyu Ouyang
- * @Date: 2023-10-29 17:35:04
- * @LastEditTime: 2025-06-19 16:38:40
- * @LastEditors: Wenyu Ouyang
- * @Description: Hydro forecast
- * @FilePath: \hydroevaluate\README.md
- * Copyright (c) 2023-2024 Wenyu Ouyang. All rights reserved.
--->
-# hydroevaluate
+# AI Hydro Forecast Homework
 
-hydroevaluate is a Python toolkit specifically designed to provide forecasting evaluation capabilities for hydrological models. This project aims to provide a more practical evaluation framework for trained hydrological models through inference computation and comprehensive evaluation analysis.
+> 本科生实习课程：使用 AI Agent 工具辅助水文模型率定
 
-## Project Background
+## 关于本项目
 
-Current issues with hydrological model evaluation:
-- Both physically-based and machine learning-based hydrological models primarily rely on existing datasets for offline evaluation without considering actual forecasting scenarios
-- Lack of comprehensive assessment for hydrological forecasting performance
-- Tedious and time-consuming work such as plotting requires significant effort
+本仓库不是代码库，而是一个 **AI Agent Skill 项目**——它提供文档、配置和教程，帮助学生用自然语言对话的方式，通过 Claude Code / OpenCode 等 AI Agent 工具调用水文模型，完成模型率定任务。
 
-HydroEvaluate addresses these issues by providing a unified evaluation framework to facilitate the evaluation and comparison of hydrological models.
+实际的水文模型代码由以下包提供（通过 `pip install` 安装）：
+- [hydromodel](https://github.com/OuyangWenyu/hydromodel) — 概念性水文模型（XAJ、GR4J 等）
+- [torchhydro](https://github.com/OuyangWenyu/torchhydro) — 深度学习水文模型
+- [hydrodatasource](https://github.com/OuyangWenyu/hydrodatasource) — 水文数据源
 
-## Main Features
-
-### 1. Model Inference Computation
-- **Multi-model Support**: Seamless integration with torchhydro and hydromodel packages
-- **Weight Loading**: Support for loading trained model weight files
-- **Data Processing**: Utilize mature data reading modules with automatic normalization and denormalization
-- **Inference Prediction**: Perform inference computation
-
-### 2. Evaluation Analysis
-- **Metric Calculation**: Provide comprehensive hydrological evaluation metrics (NSE, KGE, etc.)
-- **Visualization Analysis**: Generate professional hydrological charts and comparative analysis plots
-- **Pipeline Configuration**: Flexibly specify evaluation metrics and visualization content through configuration files
-- **Report Generation**: Automatically generate evaluation reports
-
-### 3. Data Pipeline
-- **Multi-source Data Support**: Support for CAMELS, ERA5-Land, NLDAS, and other data sources
-- **Time Series Processing**: Time series data loader specifically designed for hydrological forecasting
-- **Forecast Scenario Simulation**: Simulate data input methods under real forecasting conditions
-
-## Installation
-
-### Requirements
-- Python >= 3.10
-- PyTorch
-- Other dependencies listed in requirements.txt
-
-### Installation Methods
+## 快速开始
 
 ```bash
-# Install from PyPI
-pip install hydroevaluate
+# 1. 克隆本项目
+git clone <this-repo-url>
+cd ai_hydro_forecast_homework
 
-# Or install from source
-git clone https://github.com/OuyangWenyu/hydroevaluate.git
-cd hydroevaluate
-pip install -e .
+# 2. 创建虚拟环境
+conda create -n hydro_homework python=3.10
+conda activate hydro_homework
+
+# 3. 安装依赖
+pip install -r requirements.txt
+
+# 4. 启动 AI Agent
+claude   # 或 opencode
 ```
 
-## Quick Start
+然后在 AI Agent 对话框里直接说：*"帮我加载 CAMELS 数据，用 XAJ 模型做率定"*
 
-### Basic Usage Workflow
-
-**TODO: Complete usage workflow**
-
-1. **Prepare Configuration File**
-```python
-from hydroevaluate import HydroEvaluate
-import yaml
-
-# Load configuration file
-with open('config.yaml', 'r') as f:
-    config = yaml.load(f, Loader=yaml.FullLoader)
-```
-
-2. **Initialize Evaluator**
-```python
-# For deep learning models
-evaluator = EvalDeepHydro(config)
-
-# For physical hydrological models
-evaluator = EvalHydroModel(config)
-```
-
-3. **Execute Inference and Evaluation**
-```python
-# Model inference
-predictions = evaluator.model_infer()
-
-# Model evaluation
-eval_results = evaluator.model_evaluate(observations)
-```
-
-### Configuration File Structure
-
-The configuration file contains three main sections:
-
-```yaml
-# Data configuration
-data_cfgs:
-  source_cfgs:
-    source_name: "camels_us"
-    source_path: "/path/to/data"
-  object_ids: ["basin_001", "basin_002"]
-  t_range_test: [["2019-06-01", "2019-10-01"]]
-  relevant_cols: ["total_precipitation_hourly", "sm_surface"]
-  target_cols: ["streamflow"]
-
-# Model configuration
-model_cfgs:
-  model_type: "torchhydro"  # or "hydromodel"
-  model_name: "Seq2Seq"
-  pth_path: "/path/to/model.pth"
-  device: [0]
-
-# Evaluation configuration
-evaluation_cfgs:
-  metrics: ["NSE", "KGE", "RMSE"]
-  rolling: 56
-  seq_first: false
-```
-
-## Project Architecture
+## 项目结构
 
 ```
-hydroevaluate/
-├── configs/          # Configuration management
-├── dataloader/       # Data loading modules
-├── modelloader/      # Model loading modules
-├── evaluator/        # Evaluation computation modules
-├── reporter/         # Report generation modules
-└── utils/           # Utility functions
+ai_hydro_forecast_homework/
+├── README.md           # 本文件
+├── CLAUDE.md           # AI Agent 配置模板（需自行创建，已 gitignore）
+├── requirements.txt    # Python 依赖
+└── docs/               # 教程文档
+    ├── index.md        # 文档索引
+    ├── setup.md        # 环境搭建详解
+    ├── prompt-tips.md  # Prompt 编写技巧
+    └── examples.md     # 操作示例
 ```
 
-### Core Module Description
+## 作业任务
 
-- **ModelLoader**: Unified model loading interface supporting torchhydro and hydromodel
-- **HydroDataLoader**: Hydrological data loader for handling time series data
-- **Evaluator**: Evaluation module including metric calculation and visualization functions
-- **Reporter**: Report generation and result output module
+### 基础任务（必做）
 
-## Supported Model Types
+| 序号 | 任务 | 说明 |
+|------|------|------|
+| 1 | 环境搭建 | 配置 Python 环境，安装依赖，启动 AI Agent |
+| 2 | 数据加载 | 让 AI Agent 加载流域数据 |
+| 3 | 模型选择 | 选择并初始化一个水文模型（XAJ、GR4J、LSTM 等） |
+| 4 | 模型率定 | 配置并执行参数率定 |
+| 5 | 结果评估 | 计算 NSE、KGE 等指标 |
+| 6 | 可视化 | 生成降雨-径流过程图、散点图 |
 
-### Deep Learning Models (TorchHydro)
-- Seq2Seq LSTM
-- Transformer
-- CNN-LSTM
-- Other PyTorch-implemented hydrological models
+### 进阶任务（选做）
 
-### Physical Hydrological Models (HydroModel)
-- Xinanjiang Model (XAJ)
-- GR4J Model
-- Other conceptual hydrological models
+| 序号 | 任务 | 说明 |
+|------|------|------|
+| 7 | 多模型对比 | 率定 2+ 模型，对比性能 |
+| 8 | 多流域测试 | 在 3+ 流域进行率定 |
+| 9 | 滚动预报评估 | 模拟真实预报场景 |
 
-## Supported Data Sources
+### 提交内容
 
-- **CAMELS**: Continental-scale basin dataset of the United States
-- **ERA5-Land**: European Centre for Medium-Range Weather Forecasts land surface reanalysis data
-- **NLDAS**: North American Land Data Assimilation System
-- **MODIS**: Satellite remote sensing soil moisture and evapotranspiration data
-- **Custom Data Sources**: Support for user-defined data formats
+1. **对话记录**：AI Agent 对话历史导出
+2. **结果文件**：率定参数、评估指标、图表
+3. **实验报告**：工作流程、问题和心得（500 字内）
 
-## Evaluation Metrics
+## 评价标准
 
-### Hydrology-specific Metrics
-- **NSE**: Nash-Sutcliffe Efficiency coefficient
-- **KGE**: Kling-Gupta Efficiency coefficient
-- **RMSE**: Root Mean Square Error
-- **MAE**: Mean Absolute Error
-- **Runoff Coefficient**: Water balance analysis
+| 评分项 | 权重 | 要求 |
+|--------|------|------|
+| 任务完成度 | 40% | 基础任务全部完成 |
+| AI 交互质量 | 25% | Prompt 清晰有效，能主动发现和纠正问题 |
+| 结果正确性 | 20% | 率定结果合理，评估计算正确 |
+| 实验报告 | 15% | 有自己的思考和见解 |
 
-### Visualization Features
-- Rainfall-runoff process plots
-- Model prediction vs observation comparison plots
-- Error distribution plots
-- Time series analysis plots
+## 常见问题
 
-## Advanced Features
+**Q: AI Agent 生成的代码报错怎么办？**
+A: 把错误信息贴给 AI Agent，让它诊断修复。学会 debug AI 写的代码是重要技能。
 
-### Rolling Forecast Evaluation
-Support for simulating rolling forecast evaluation under real forecasting scenarios:
-```python
-# Configure rolling forecast parameters
-evaluation_cfgs = {
-    "rolling": 56,  # Perform forecast every 56 time steps
-    "forecast_length": 56,  # Forecast length
-    "hindcast_length": 240  # Historical data length
-}
-```
+**Q: 能用 ChatGPT / Cursor 吗？**
+A: 可以，任何支持项目级代码交互的 AI 工具都行。推荐 Claude Code。
 
-### Batch Basin Evaluation
-Support for batch evaluation and comparative analysis of multiple basins:
-```python
-object_ids = ["basin_001", "basin_002", "basin_003"]
-# Automatically process multiple basins in a loop
-```
+**Q: 模型率定太慢？**
+A: 先从短时间范围、少参数开始，跑通流程后再扩大。
 
-### Model Performance Comparison
-Support for historical evaluation result comparison and performance trend analysis:
-```python
-# Generate comparison report
-evaluator.compare_history_report(new_eval_log, old_eval_log)
-```
-
-## Development Roadmap
-
-- [ ] Add more evaluation metrics
-- [ ] Support more data sources
-- [ ] Enhance visualization capabilities
-- [ ] Add model uncertainty analysis
-- [ ] Develop web interface
-- [ ] Support distributed computing
-
-## Contributing
-
-All forms of contributions are welcome! Please refer to [CONTRIBUTING.md](contributing.md) for detailed information.
-
-## License
-
-This project uses the BSD license. See [LICENSE](LICENSE) file for details.
-
-## Contact
-
-- **Project Homepage**: https://github.com/OuyangWenyu/hydroevaluate
-- **Documentation**: https://hydroevaluate.readthedocs.io/
-- **Issue Reporting**: https://github.com/OuyangWenyu/hydroevaluate/issues
-
-## Citation
-
-If you use HydroEvaluate in your research, please cite:
-
-```bibtex
-@software{hydroevaluate,
-  title={HydroEvaluate: A Real Evaluation Tool for Hydrological Forecast},
-  author={Wenyu Ouyang},
-  url={https://github.com/OuyangWenyu/hydroevaluate},
-  year={2024}
-}
-```
+**Q: 对水文模型完全不了解？**
+A: 直接问 AI："什么是 NSE"、"XAJ 模型有哪些参数"。AI 既是工具也是老师。
 
 ---
 
-**Note**: This project is under active development and APIs may change. It is recommended to follow project updates and check the changelog.
+**课程教师**: Wenyu Ouyang | **联系邮箱**: wenyuouyang@outlook.com

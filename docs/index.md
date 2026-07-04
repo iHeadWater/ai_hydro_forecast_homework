@@ -1,18 +1,28 @@
-# Welcome to hydroevaluate
+# 文档索引
 
+欢迎！这里是你完成水文模型率定作业所需的一切教程。
 
-[![image](https://img.shields.io/pypi/v/hydroevaluate.svg)](https://pypi.python.org/pypi/hydroevaluate)
+## 文档列表
 
-[![image](https://pyup.io/repos/github/OuyangWenyu/hydroevaluate/shield.svg)](https://pyup.io/repos/github/OuyangWenyu/hydroevaluate)
+| 文档 | 内容 |
+|------|------|
+| [环境搭建详解](setup.md) | Python 环境配置、依赖安装、AI Agent 工具安装 |
+| [Prompt 编写技巧](prompt-tips.md) | 如何写出高效的 Prompt，让 AI 更懂你的需求 |
+| [操作示例](examples.md) | 从零到率定的完整对话示例 |
 
+## 学习路径建议
 
-**A real evaluation tool for hydrological forecast**
+```
+环境搭建 → 看懂示例 → 自己写 Prompt → 完成基础任务 → 挑战进阶任务
+```
 
+1. **先搭环境**：按 [setup.md](setup.md) 一步步来，确保 `claude` 能正常启动
+2. **照猫画虎**：看 [examples.md](examples.md) 里的对话示例，复制类似的 Prompt
+3. **独立操作**：按你的需求写好 Prompt，引导 AI 完成每个步骤
+4. **进阶挑战**：尝试多模型对比、多流域测试
 
--   Free software: BSD license
--   Documentation: <https://OuyangWenyu.github.io/hydroevaluate>
-    
+## 遇到问题？
 
-## Features
-
--   TODO
+- 先把错误信息贴给 AI Agent，让它帮你诊断
+- 查看 [Prompt 编写技巧](prompt-tips.md) 的"常见翻车现场"章节
+- 实在解决不了，问老师和助教
