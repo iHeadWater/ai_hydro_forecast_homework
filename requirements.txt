@@ -7,9 +7,9 @@ modelscope
 # runs, NOT the PyPI release. Install from the repo root:
 #     pip install -r requirements.txt
 #
-# hydrodataset MUST be the feat/unified-data-path-resolution branch: the
-# PyPI / main version lacks the hydrodataset.configs module and pulls an
-# incompatible aqua_fetch, both of which break `import hydrodatasource`.
+# hydrodataset must be the provided local source (not the PyPI release): the
+# PyPI version lacks the hydrodataset.configs module and pulls an incompatible
+# aqua_fetch, both of which break `import hydrodatasource`.
 -e ./hydrodataset
 -e ./hydrodatasource
 -e ./hydromodel

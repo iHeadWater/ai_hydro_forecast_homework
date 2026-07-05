@@ -97,6 +97,9 @@ print(ds.read_object_ids())
 - **`FileNotFoundError: attributes.csv`**:说明用的 hydrodatasource 是旧版。本仓库的
   hydrodatasource 已支持 nc 属性 + 可选 basins.shp(commit `436ac80`),确认装的是本地 editable 版
   (`pip show hydrodatasource` 的 Location 指向仓库内)。
+- **`FileNotFoundError: ...\.cache\hydrodataset\...attributes.nc`(缓存目录不存在)**:新机器首次运行、
+  缓存目录还没建。本仓库 hydrodatasource 已修复(自动建目录);若仍遇到说明用了没打补丁的旧包,临时办法:
+  `New-Item -ItemType Directory -Force "$env:USERPROFILE\.cache\hydrodataset"`。
 - **NSE 看不到**:率定只出 RMSE;必须再跑第 4 步评估,NSE 才在 `basins_metrics.csv` 里。
 - **换成 GR 模型跑不通**:GR 系列是日/月尺度,不适配 3h 事件数据,且评估脚本是 XAJ 专用。
   想比较不同模型时,在 XAJ 系列内部换(xaj / xaj_mz / semi_xaj)。

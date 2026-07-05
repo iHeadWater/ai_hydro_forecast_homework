@@ -20,7 +20,10 @@
 1. **先搭环境**：按 [setup.md](setup.md) 一步步来，确保 `claude` 能正常启动
 2. **照猫画虎**：看 [examples.md](examples.md) 里的对话示例，复制类似的 Prompt
 3. **独立操作**：按你的需求写好 Prompt，引导 AI 完成每个步骤
-4. **进阶挑战**：尝试多模型对比、多流域测试
+4. **进阶挑战**：XAJ 系列内多模型对比、覆盖更多流域、调参提升 NSE
+
+> 💡 本仓库自带 **songliao-calibration** skill：启动 Claude Code 后直接说
+> "帮我率定 songliao" 即可，它会自动改 `songliao_event_3h.yaml`、跑率定+评估、报指标。
 
 ## 遇到问题？
 
