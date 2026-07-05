@@ -10,11 +10,14 @@
 
 推荐使用 Miniconda 管理 Python 环境：
 
+> 注意：Python 版本要 **3.11 或更高**。hydromodel 要求 `requires-python >=3.11`，
+> 用 3.10 会装不上。
+
 **Windows:**
 ```bash
 # 下载并安装 Miniconda: https://docs.conda.io/en/latest/miniconda.html
 # 安装后打开 Anaconda Prompt（或终端）
-conda create -n hydro_homework python=3.10
+conda create -n hydro_homework python=3.11
 conda activate hydro_homework
 ```
 
@@ -25,26 +28,50 @@ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 bash Miniconda3-latest-Linux-x86_64.sh
 
 # 创建环境
-conda create -n hydro_homework python=3.10
+conda create -n hydro_homework python=3.11
 conda activate hydro_homework
 ```
 
-## 第二步：安装依赖包
+## 第二步：放入源码并安装依赖
+
+本仓库**不自带** `hydrodatasource/`、`hydromodel/`、`data/`，需要你自己把这三份放到
+仓库根目录下（它们已在 `.gitignore` 中，不会污染本仓库）：
+
+```
+ai_hydro_forecast_homework/
+  hydrodatasource/   # 你放入的源码（git 克隆，保留 .git 目录）
+  hydromodel/        # 你放入的源码
+  data/              # 你放入的数据
+  requirements.txt
+```
+
+然后从仓库根目录安装依赖：
 
 ```bash
-# 进入项目目录
+# 务必在仓库根目录执行，requirements.txt 里的 ./ 相对路径才能对上
 cd ai_hydro_forecast_homework
 
-# 安装水文模型相关依赖
+# 第三方包走 PyPI；hydrodatasource / hydromodel 以 editable 方式装本地源码
 pip install -r requirements.txt
 ```
 
-验证安装：
+> **为什么用 editable（`-e ./...`）**：这样跑的是你放进来这份源码（含你的改动），
+> 而不是 PyPI 上的发布版。
+>
+> **为什么要保留 `.git`**：`hydrodatasource` 用 hatch-vcs 从 git tag 推导版本，
+> 若删掉 `.git`，安装会报"无法确定版本"而失败。
+
+验证安装（确认用的是本地源码）：
 ```bash
-python -c "import hydromodel; print('hydromodel OK')"
-python -c "import torchhydro; print('torchhydro OK')"
-python -c "import hydrodatasource; print('hydrodatasource OK')"
+python -c "import hydromodel, hydrodatasource; print('imports OK')"
+
+# 确认装的是仓库里的本地源码，而不是 PyPI 版：
+# Windows:
+pip show hydrodatasource | findstr Location
+# macOS / Linux:
+# pip show hydrodatasource | grep Location
 ```
+`Location` 应指向仓库里的 `hydrodatasource` 目录。
 
 ## 第三步：配置数据访问
 
@@ -103,7 +130,7 @@ opencode
 
 启动 AI Agent 后，试试这个最简单的 Prompt：
 
-> "你好，帮我检查一下当前环境，确认 hydromodel 和 torchhydro 都能正常 import"
+> "你好，帮我检查一下当前环境，确认 hydromodel 和 hydrodatasource 都能正常 import"
 
 如果 AI 回复正常，环境就搭好了！
 

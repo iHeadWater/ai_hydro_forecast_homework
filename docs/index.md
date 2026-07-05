@@ -7,6 +7,7 @@
 | 文档 | 内容 |
 |------|------|
 | [环境搭建详解](setup.md) | Python 环境配置、依赖安装、AI Agent 工具安装 |
+| [用 DeepSeek 配置 Claude Code](claude-code-deepseek.md) | 免订阅、低成本驱动 Claude Code 的官方配置方案 |
 | [Prompt 编写技巧](prompt-tips.md) | 如何写出高效的 Prompt，让 AI 更懂你的需求 |
 | [操作示例](examples.md) | 从零到率定的完整对话示例 |
 

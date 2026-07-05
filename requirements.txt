@@ -1,5 +1,11 @@
+# Third-party packages from PyPI.
 mlflow
-hydromodel
-torchhydro
 modelscope
-hydrodatasource
+hydrodataset>=0.2.3
+
+# Locally placed source (you drop these folders in yourself), installed
+# editable so the code in these folders — and any edits — is what actually
+# runs, NOT the PyPI release. Install from the repo root:
+#     pip install -r requirements.txt
+-e ./hydrodatasource
+-e ./hydromodel

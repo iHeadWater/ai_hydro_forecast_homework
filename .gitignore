@@ -2,6 +2,10 @@ data/
 jupyter/
 CLAUDE.md
 
+# Vendored sibling projects (developed in their own repos, placed here for use)
+hydromodel/
+hydrodatasource/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
