@@ -6,44 +6,78 @@
 
 本仓库不是代码库，而是一个 **AI Agent Skill 项目**——它提供文档、配置和教程，帮助学生用自然语言对话的方式，通过 Claude Code / OpenCode 等 AI Agent 工具调用水文模型，完成模型率定任务。
 
-实际的水文模型代码由以下包提供（通过 `pip install` 安装）：
-- [hydromodel](https://github.com/OuyangWenyu/hydromodel) — 概念性水文模型（XAJ、GR4J 等）
-- [torchhydro](https://github.com/OuyangWenyu/torchhydro) — 深度学习水文模型
-- [hydrodatasource](https://github.com/OuyangWenyu/hydrodatasource) — 水文数据源
+实际的水文模型代码**不随本仓库分发**，而是由老师以**压缩包**形式单独提供，你自己解压放到仓库根目录（这几个文件夹已 gitignore，不会污染仓库）：
+- **hydrodataset**（务必用 `feat/unified-data-path-resolution` 分支）— 数据路径解析底座
+- **hydrodatasource** — 自定义水文数据读取（本课程用 songliao 松辽数据）
+- **hydromodel** — 概念性水文模型（XAJ 系列等）
+
+再配合放入 `data/`（songliao 3h 洪水事件数据）。安装时这三份源码以 **editable** 方式装入环境，详见 [docs/setup.md](docs/setup.md)。
 
 ## 快速开始
 
 ```bash
-# 1. 克隆本项目
-git clone <this-repo-url>
+# 1. 获取本仓库
 cd ai_hydro_forecast_homework
 
-# 2. 创建虚拟环境
-conda create -n hydro_homework python=3.10
+# 2. 放入老师给的源码与数据（压缩包解压到仓库根目录）
+#    hydrodataset/     ← 记得切到 feat/unified-data-path-resolution 分支
+#    hydrodatasource/  hydromodel/  data/
+#    详细步骤见 docs/setup.md
+
+# 3. 创建虚拟环境（Python 必须 ≥3.11）
+conda create -n hydro_homework python=3.11
 conda activate hydro_homework
 
-# 3. 安装依赖
+# 4. 从仓库根目录安装依赖（本地源码 editable + PyPI）
 pip install -r requirements.txt
 
-# 4. 启动 AI Agent
+# 5. 启动 AI Agent（首次使用需先安装，见下方安装教程）
 claude   # 或 opencode
 ```
 
-然后在 AI Agent 对话框里直接说：*"帮我加载 CAMELS 数据，用 XAJ 模型做率定"*
+> **AI Agent 安装教程**：
+> - Claude Code 安装：[docs/setup.md 第四步](docs/setup.md#第四步安装-ai-agent-工具)
+> - 用 DeepSeek 低成本驱动 Claude Code（免订阅、国内直连）：[docs/claude-code-deepseek.md](docs/claude-code-deepseek.md)
+
+然后在 AI Agent 对话框里直接说：*"帮我率定 songliao 数据集，并把 NSE 报给我"*
+（本仓库自带 songliao 率定 skill，见下方【内置 Skill】）
 
 ## 项目结构
 
 ```
 ai_hydro_forecast_homework/
-├── README.md           # 本文件
-├── CLAUDE.md           # AI Agent 配置模板（需自行创建，已 gitignore）
-├── requirements.txt    # Python 依赖
-└── docs/               # 教程文档
-    ├── index.md        # 文档索引
-    ├── setup.md        # 环境搭建详解
-    ├── prompt-tips.md  # Prompt 编写技巧
-    └── examples.md     # 操作示例
+├── README.md              # 本文件
+├── CLAUDE.md              # AI Agent 项目说明（已 gitignore）
+├── requirements.txt       # Python 依赖
+├── .claude/
+│   └── skills/
+│       └── songliao-calibration/   # 内置 skill：率定+评估 songliao
+├── docs/                  # 教程文档
+│   ├── index.md           # 文档索引
+│   ├── setup.md           # 环境搭建详解
+│   ├── claude-code-deepseek.md  # 用 DeepSeek 低成本驱动 Claude Code
+│   ├── prompt-tips.md     # Prompt 编写技巧
+│   └── examples.md        # 操作示例
+│
+│   # 以下由你放入（压缩包解压），均已 gitignore：
+├── hydrodataset/          # 源码（feat/unified-data-path-resolution 分支）
+├── hydrodatasource/       # 源码
+├── hydromodel/            # 源码（含 configs/songliao_event_3h.yaml）
+└── data/                  # songliao 数据
 ```
+
+## 内置 Skill：songliao 率定
+
+本仓库自带一个 Claude Code skill：`.claude/skills/songliao-calibration/`。
+在仓库里启动 Claude Code 后，直接用自然语言说需求即可，例如：
+
+- *"帮我率定 songliao，并把 NSE 报给我"*
+- *"把模型换成 xaj、SCE-UA 的 rep 调到 8000 重跑"*
+- *"换 songliao_11001300 这个流域再跑一次"*
+
+Claude 会自动改 `hydromodel/configs/songliao_event_3h.yaml` 的参数、跑率定 + 评估、
+读 `basins_metrics.csv` 把 NSE / KGE / RMSE 等指标报给你。**改这份 yaml 的参数
+（流域、模型、迭代次数、训练/测试时段）就能得到不同结果**——这正是本次作业的核心玩法。
 
 ## 作业任务
 
@@ -53,7 +87,7 @@ ai_hydro_forecast_homework/
 |------|------|------|
 | 1 | 环境搭建 | 配置 Python 环境，安装依赖，启动 AI Agent |
 | 2 | 数据加载 | 让 AI Agent 加载流域数据 |
-| 3 | 模型选择 | 选择并初始化一个水文模型（XAJ、GR4J、LSTM 等） |
+| 3 | 模型选择 | 选择一个水文模型（songliao 是 3h 洪水事件数据，适配 XAJ 系列：xaj / xaj_mz / semi_xaj） |
 | 4 | 模型率定 | 配置并执行参数率定 |
 | 5 | 结果评估 | 计算 NSE、KGE 等指标 |
 | 6 | 可视化 | 生成降雨-径流过程图、散点图 |
@@ -74,12 +108,48 @@ ai_hydro_forecast_homework/
 
 ## 评价标准
 
-| 评分项 | 权重 | 要求 |
+总评由三部分构成，另设加分项。**率定质量不是唯一标准**——skill 的完善程度和实验报告同样重要。
+
+| 评分项 | 权重 | 说明 |
 |--------|------|------|
-| 任务完成度 | 40% | 基础任务全部完成 |
-| AI 交互质量 | 25% | Prompt 清晰有效，能主动发现和纠正问题 |
-| 结果正确性 | 20% | 率定结果合理，评估计算正确 |
-| 实验报告 | 15% | 有自己的思考和见解 |
+| 率定质量 | 40% | 按验证期达标流域数分档，见下方【率定质量分档】 |
+| Skill 完善程度 | 35% | 对 songliao-calibration skill 的使用与改进质量 |
+| 实验报告 | 25% | 工作流程、问题分析与心得 |
+
+### 率定质量分档
+
+在固定的**验证期**内，统计达标（验证集 **NSE ≥ 0.40**）的流域**数量**
+（songliao 约 16 个可率定流域）：
+
+| 档次 | 该项得分 | 达标流域数 |
+|------|----------|-----------|
+| **A** | 90–100 | ≥ 12 |
+| **B** | 80–89 | 8 ~ 11 |
+| **C** | 70–79 | 4 ~ 7 |
+| **D** | 60–69 | 1 ~ 3 |
+| **F** | < 60 | 0 / 无有效结果 |
+
+> - 同档内：达标流域越多、平均 NSE 越高，得分越高。
+> - 验证期由 config 的 `test_period` 固定——**请勿修改验证期**，训练/率定只用 `train_period`。
+
+### Skill 完善程度
+
+- 能按需求正确修改 config 参数（流域 / 模型 / 迭代次数 / 训练测试期）并跑通
+- 对 skill 的补充与改进：补排错说明、完善参数文档、支持新用法等
+- skill 触发准确、流程顺畅、结果汇报清晰
+
+### 加分项（酌情加分）
+
+在总评之上额外加分：
+
+- 提交有价值的 **Issue**（报告 bug、提改进建议、复现并定位问题）
+- 有意义的 **commit**（清晰改动 + 规范提交说明）
+- 提交 **Pull Request**（修复或改进被采纳）
+
+### 学术诚信
+
+若两名同学的**随机种子**与**流域选择**完全一致，将对两份提交一并核查；
+代码完全雷同者，该次作业记 **0 分**。
 
 ## 常见问题
 
