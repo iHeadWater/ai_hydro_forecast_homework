@@ -2,6 +2,9 @@
 mlflow
 modelscope
 hydrodataset>=0.2.3
+# Pin aqua_fetch: 1.0.1 removed aqua_fetch.utils.check_attributes, which
+# hydrodataset still imports -> ImportError. 1.0.0 keeps it.
+aqua_fetch==1.0.0
 
 # Locally placed source (you drop these folders in yourself), installed
 # editable so the code in these folders — and any edits — is what actually

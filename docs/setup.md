@@ -39,7 +39,7 @@ conda activate hydro_homework
 
 ```
 ai_hydro_forecast_homework/
-  hydrodatasource/   # 你放入的源码（git 克隆，保留 .git 目录）
+  hydrodatasource/   # 你放入的源码
   hydromodel/        # 你放入的源码
   data/              # 你放入的数据
   requirements.txt
@@ -138,6 +138,20 @@ opencode
 
 ### Q: pip install 报错怎么办？
 A: 把完整的错误信息贴给 AI Agent，让它帮你分析。通常是指定版本冲突或缺少系统依赖。
+
+### Q: import 时报 `cannot import name 'check_attributes' from 'aqua_fetch.utils'`？
+A: 这是 `hydrodataset` 依赖的 `aqua_fetch` 版本不匹配 —— `aqua_fetch` 1.0.1 删掉了
+`check_attributes`，但 `hydrodataset` 还在 import 它。`requirements.txt` 已把它 pin 到
+`aqua_fetch==1.0.0`。如果你是在这个改动之前装的，重新装一遍即可降级修复：
+```bash
+python -m pip install -r requirements.txt
+# 或只降这一个包：
+python -m pip install aqua_fetch==1.0.0
+```
+
+### Q: 提示 `Configuration file not found: ~/hydro_setting.yml`？
+A: 这只是"没找到 MinIO 配置文件"的提示，不是致命错误，不影响本地数据（`data/`）的使用。
+只有要用 MinIO 远程数据时才需要按上面"第三步 方式一"创建该文件。
 
 ### Q: Claude Code 连不上？
 A: 检查网络（可能需要科学上网），确认 API Key 有效。
