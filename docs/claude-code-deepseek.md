@@ -102,7 +102,7 @@ claude
   "env": {
     "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
     "ANTHROPIC_AUTH_TOKEN": "你的DeepSeek_API_Key",
-    "ANTHROPIC_MODEL": "deepseek-v4-pro",
+    "ANTHROPIC_MODEL": "deepseek-v4-pro[1m]",
     "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-v4-flash"
   }
 }
