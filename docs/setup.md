@@ -34,16 +34,21 @@ conda activate hydro_homework
 
 ## 第二步：放入源码并安装依赖
 
-本仓库**不自带** `hydrodatasource/`、`hydromodel/`、`data/`，需要你自己把这三份放到
-仓库根目录下（它们已在 `.gitignore` 中，不会污染本仓库）：
+本仓库**不自带** `hydrodataset/`、`hydrodatasource/`、`hydromodel/`、`data/`，
+需要你自己把这几份放到仓库根目录下（它们已在 `.gitignore` 中，不会污染本仓库）：
 
 ```
 ai_hydro_forecast_homework/
+  hydrodataset/      # 你放入的源码（务必用 feat/unified-data-path-resolution 分支）
   hydrodatasource/   # 你放入的源码
   hydromodel/        # 你放入的源码
   data/              # 你放入的数据
   requirements.txt
 ```
+
+> **hydrodataset 必须用 `feat/unified-data-path-resolution` 分支**：PyPI / main
+> 版本缺少 `hydrodataset.configs` 模块、且会拉不兼容的 aqua_fetch，都会导致
+> `import hydrodatasource` 失败。放入前先 `git checkout feat/unified-data-path-resolution`。
 
 然后从仓库根目录安装依赖：
 
@@ -51,7 +56,7 @@ ai_hydro_forecast_homework/
 # 务必在仓库根目录执行，requirements.txt 里的 ./ 相对路径才能对上
 cd ai_hydro_forecast_homework
 
-# 第三方包走 PyPI；hydrodatasource / hydromodel 以 editable 方式装本地源码
+# 三份本地源码以 editable 方式安装；mlflow / modelscope 走 PyPI
 pip install -r requirements.txt
 ```
 
@@ -59,7 +64,8 @@ pip install -r requirements.txt
 > 而不是 PyPI 上的发布版。
 >
 > **为什么要保留 `.git`**：`hydrodatasource` 用 hatch-vcs 从 git tag 推导版本，
-> 若删掉 `.git`，安装会报"无法确定版本"而失败。
+> 若删掉 `.git`，安装会报"无法确定版本"而失败；`hydrodataset` 也要靠 `.git` 才能
+> 停在正确的分支上。
 
 验证安装（确认用的是本地源码）：
 ```bash
@@ -139,15 +145,17 @@ opencode
 ### Q: pip install 报错怎么办？
 A: 把完整的错误信息贴给 AI Agent，让它帮你分析。通常是指定版本冲突或缺少系统依赖。
 
-### Q: import 时报 `cannot import name 'check_attributes' from 'aqua_fetch.utils'`？
-A: 这是 `hydrodataset` 依赖的 `aqua_fetch` 版本不匹配 —— `aqua_fetch` 1.0.1 删掉了
-`check_attributes`，但 `hydrodataset` 还在 import 它。`requirements.txt` 已把它 pin 到
-`aqua_fetch==1.0.0`。如果你是在这个改动之前装的，重新装一遍即可降级修复：
+### Q: import 时报 `No module named 'hydrodataset.configs'` 或 `cannot import name 'check_attributes' from 'aqua_fetch.utils'`？
+A: 两个都是**用错了 hydrodataset 版本**——你装的是 PyPI / main 版，它没有
+`hydrodataset.configs` 模块、还会拉不兼容的 aqua_fetch。解决办法:把放入的
+`hydrodataset/` 切到 **`feat/unified-data-path-resolution` 分支**，再重装:
 ```bash
+cd hydrodataset
+git checkout feat/unified-data-path-resolution
+cd ..
 python -m pip install -r requirements.txt
-# 或只降这一个包：
-python -m pip install aqua_fetch==1.0.0
 ```
+确认切对分支:`git -C hydrodataset branch --show-current`。
 
 ### Q: 提示 `Configuration file not found: ~/hydro_setting.yml`？
 A: 这只是"没找到 MinIO 配置文件"的提示，不是致命错误，不影响本地数据（`data/`）的使用。

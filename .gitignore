@@ -5,6 +5,7 @@ CLAUDE.md
 # Vendored sibling projects (developed in their own repos, placed here for use)
 hydromodel/
 hydrodatasource/
+hydrodataset/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

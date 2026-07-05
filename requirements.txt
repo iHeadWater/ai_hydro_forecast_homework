@@ -1,14 +1,15 @@
 # Third-party packages from PyPI.
 mlflow
 modelscope
-hydrodataset>=0.2.3
-# Pin aqua_fetch: 1.0.1 removed aqua_fetch.utils.check_attributes, which
-# hydrodataset still imports -> ImportError. 1.0.0 keeps it.
-aqua_fetch==1.0.0
 
 # Locally placed source (you drop these folders in yourself), installed
 # editable so the code in these folders — and any edits — is what actually
 # runs, NOT the PyPI release. Install from the repo root:
 #     pip install -r requirements.txt
+#
+# hydrodataset MUST be the feat/unified-data-path-resolution branch: the
+# PyPI / main version lacks the hydrodataset.configs module and pulls an
+# incompatible aqua_fetch, both of which break `import hydrodatasource`.
+-e ./hydrodataset
 -e ./hydrodatasource
 -e ./hydromodel
