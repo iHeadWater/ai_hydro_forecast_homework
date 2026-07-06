@@ -7,9 +7,9 @@
 本仓库不是代码库，而是一个 **AI Agent Skill 项目**——它提供文档、配置和教程，帮助学生用自然语言对话的方式，通过 Claude Code / OpenCode 等 AI Agent 工具调用水文模型，完成模型率定任务。
 
 实际的水文模型代码**不随本仓库分发**，而是由老师以**压缩包**形式单独提供，你自己解压放到仓库根目录（这几个文件夹已 gitignore，不会污染仓库）：
-- **hydrodataset** — 数据路径解析底座
-- **hydrodatasource** — 自定义水文数据读取（本课程用 songliao 松辽数据）
-- **hydromodel** — 概念性水文模型（XAJ 系列等）
+- **[hydrodataset](https://github.com/OuyangWenyu/hydrodataset/tree/feat/unified-data-path-resolution)** — 数据路径解析底座
+- **[hydrodatasource](https://github.com/iHeadWater/hydrodatasource/tree/feat/unified-data-interface)** — 自定义水文数据读取（本课程用 songliao 松辽数据）
+- **[hydromodel](https://gitcode.com/dlut-water/hydromodel/tree/refactor/remove-data-resolver-use-opendataset)** — 概念性水文模型（XAJ 系列等）
 
 再配合放入 `data/`（songliao 3h 洪水事件数据）。安装时这三份源码以 **editable** 方式装入环境，详见 [docs/setup.md](docs/setup.md)。
 
