@@ -10,6 +10,9 @@
 | [用 DeepSeek 配置 Claude Code](claude-code-deepseek.md) | 免订阅、低成本驱动 Claude Code 的官方配置方案 |
 | [Prompt 编写技巧](prompt-tips.md) | 如何写出高效的 Prompt，让 AI 更懂你的需求 |
 | [操作示例](examples.md) | 从零到率定的完整对话示例 |
+| [统一工作流入口](songliao-workflow-launcher-guide.md) | 从仓库根目录检查并运行 Songliao 流程 |
+| [多实验结果对比](songliao-experiment-comparison-guide.md) | 自动汇总调参实验并按 NSE 排名 |
+| [提交前自检](songliao-submission-audit-guide.md) | 不重跑模型地检查指标、参数和图件 |
 
 ## 学习路径建议
 
