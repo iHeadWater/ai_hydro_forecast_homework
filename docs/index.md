@@ -10,6 +10,7 @@
 | [用 DeepSeek 配置 Claude Code](claude-code-deepseek.md) | 免订阅、低成本驱动 Claude Code 的官方配置方案 |
 | [Prompt 编写技巧](prompt-tips.md) | 如何写出高效的 Prompt，让 AI 更懂你的需求 |
 | [操作示例](examples.md) | 从零到率定的完整对话示例 |
+| [多实验可复现率定工作流](reproducible-calibration-workflow.md) | 多轮实验的独立配置、中断恢复、汇总与校验 |
 
 ## 学习路径建议
 
@@ -23,7 +24,8 @@
 4. **进阶挑战**：XAJ 系列内多模型对比、覆盖更多流域、调参提升 NSE
 
 > 💡 本仓库自带 **songliao-calibration** skill：启动 Claude Code 后直接说
-> "帮我率定 songliao" 即可，它会自动改 `songliao_event_3h.yaml`、跑率定+评估、报指标。
+> "帮我率定 songliao" 即可，它会从 `songliao_event_3h.yaml` 基线复制独立实验配置，
+> 只修改副本，随后运行率定、评估并报告指标。
 
 ## 遇到问题？
 

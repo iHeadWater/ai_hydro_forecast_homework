@@ -1,8 +1,8 @@
 # 操作示例
 
 > 以下是用内置 **songliao-calibration** skill 完成率定的对话示例。
-> **核心玩法：改 `hydromodel/configs/songliao_event_3h.yaml` 的参数，跑出不同结果。**
-> 你只管用自然语言说需求，skill 会自动改配置、跑率定+评估、读指标。
+> **核心玩法：以 `songliao_event_3h.yaml` 为只读模板，复制独立实验配置并调整参数，跑出不同结果。**
+> 你只管用自然语言说需求，skill 会创建独立实验配置、跑率定+评估并读取指标。
 >
 > 本作业只率定**碧流河流域**（basin id：`songliao_21401550`），下面的示例都围绕它展开。
 
@@ -25,9 +25,11 @@
 > "帮我率定碧流河，用默认配置，跑完把 NSE 报给我"
 
 **AI 会做的事**（skill 自动执行）：
-1. 从 `hydromodel/` 目录跑 `python scripts/run_event_calibration.py --config configs/songliao_event_3h.yaml`（SCE-UA 优化）
-2. 再跑 `python scripts/run_xaj_evaluate.py --calibration-dir results/songliao_event/songliao_event_3h --eval-period test`
-3. 读 `basins_metrics.csv`，汇报指标：
+1. 将 `configs/songliao_event_3h.yaml` 复制为 `configs/experiments/<run_id>.yaml`，保持 `test_period` 不变并设置唯一 `experiment_name`
+2. 先执行 dry-run 验证配置
+3. 从 `hydromodel/` 目录跑 `python scripts/run_event_calibration.py --config configs/experiments/<run_id>.yaml`（SCE-UA 优化）
+4. 再跑 `python scripts/run_xaj_evaluate.py --calibration-dir results/songliao_event/<experiment_name> --eval-period test`
+5. 读 `basins_metrics.csv`，汇报指标：
 
 ```
 流域 songliao_21401550（碧流河，xaj_mz，rep=5000）：
@@ -36,7 +38,7 @@
 | NSE   | 0.47   |
 | RMSE  | 1.37   |
 | KGE   | 0.55   |
-| PBIAS | -8.2%  |
+| Bias | -8.2   |
 ```
 
 > 提示：率定本身只给 RMSE，**NSE 要跑评估这一步才有**。
@@ -82,8 +84,9 @@
 
 ## 关键要点
 
-1. **一切围绕那份 yaml**：`songliao_event_3h.yaml` 里改参数（模型 / rep / kernel_size / 时段）就能得到不同结果。
+1. **不要直接改基线配置**：`songliao_event_3h.yaml` 是老师提供的只读模板。每次实验都复制到 `configs/experiments/<run_id>.yaml`，只编辑副本。详见 [多实验可复现率定工作流](reproducible-calibration-workflow.md)。
 2. **从 `hydromodel/` 目录跑**：config 里 `uri` 是相对路径 `../data/...`，跑错目录会找不到数据。
 3. **NSE 要评估才有**：率定只出 RMSE，记得让 AI 跑第二步评估。
 4. **报错就贴回去**：任何错误信息直接贴给 AI，让它诊断修复。
 5. **记录好参数与结果**：把每次的参数配置和对应 NSE 记下来，方便对比、写报告。
+6. **指标看实际表头**：`basins_metrics.csv` 的实际列名可能不同于文档示例（例如当前输出 `Bias` 而非 `PBIAS`），读取时以实际 CSV 列名为准。

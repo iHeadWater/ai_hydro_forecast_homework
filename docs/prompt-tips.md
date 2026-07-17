@@ -48,8 +48,8 @@
 | 模型 | XAJ 系列：xaj（新安江）、xaj_mz、semi_xaj、xaj_slw（**3h 事件只用这些，别用 GR/LSTM**） |
 | 数据 | songliao 松辽 3h 洪水事件、rain（降雨 mm/3h）、inflow（入库流量 m³/s）、ES（蒸散发）、flood_event（事件标记） |
 | 率定 | SCE-UA、rep（迭代次数）、ngs（复合形个数）、kernel_size（汇流单位线长度） |
-| 指标 | NSE（纳什效率系数）、KGE、RMSE、PBIAS |
-| 阶段 | warmup（预热期，事件数据设 0）、train_period（率定期）、test_period（验证期） |
+| 指标 | NSE（纳什效率系数）、KGE、RMSE、Bias |
+| 阶段 | warmup（预热期，事件数据设 0）、train_period（率定期）、test_period（验证期，禁止修改） |
 
 ## 让 AI 自我纠错
 
@@ -79,8 +79,8 @@
 
 ### 4. 改错了不该改的参数
 
-**症状**：改了 `time_unit` / `reader` / `uri` 后报错
-**解决**："这几项别动，只改流域、模型、rep、时段这些"
+**症状**：改了 `test_period` / `time_unit` / `reader` / `uri` 后出现问题
+**解决**："`test_period` 是老师固定的验证期，禁止修改；`time_unit`、`reader`、`uri` 也别动。多实验时使用独立配置和 run_id，详见 [多实验可复现率定工作流](reproducible-calibration-workflow.md)"
 
 ## 进阶技巧
 
