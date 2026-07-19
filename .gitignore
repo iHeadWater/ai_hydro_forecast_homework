@@ -232,3 +232,5 @@ fabric.properties
 /example/*
 /results/*
 /.hydrodataset*/
+/reports/
+/.hydro-workspace/
