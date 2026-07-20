@@ -10,6 +10,7 @@
 | [用 DeepSeek 配置 Claude Code](claude-code-deepseek.md) | 免订阅、低成本驱动 Claude Code 的官方配置方案 |
 | [Prompt 编写技巧](prompt-tips.md) | 如何写出高效的 Prompt，让 AI 更懂你的需求 |
 | [操作示例](examples.md) | 从零到率定的完整对话示例 |
+| [无预热洪水事件的初始状态率定](initial-state-calibration.md) | 诊断固定初始蓄水、兼容地试验初始湿润度参数并正确解释结果 |
 
 ## 学习路径建议
 
@@ -21,12 +22,14 @@
 2. **照猫画虎**：看 [examples.md](examples.md) 里的对话示例，复制类似的 Prompt
 3. **独立操作**：按你的需求写好 Prompt，引导 AI 完成每个步骤
 4. **进阶挑战**：XAJ 系列内多模型对比、覆盖更多流域、调参提升 NSE
+5. **诊断瓶颈**：仅当无预热事件的常规调参收益停滞时，阅读[初始状态率定指南](initial-state-calibration.md)
 
-> 💡 本仓库自带 **songliao-calibration** skill：启动 Claude Code 后直接说
-> "帮我率定 songliao" 即可，它会自动改 `songliao_event_3h.yaml`、跑率定+评估、报指标。
+> 本仓库自带 **songliao-calibration** skill：启动 Claude Code 后直接说
+> “帮我率定 songliao” 即可，它会自动改 `songliao_event_3h.yaml`、跑率定+评估、报指标。
 
 ## 遇到问题？
 
 - 先把错误信息贴给 AI Agent，让它帮你诊断
-- 查看 [Prompt 编写技巧](prompt-tips.md) 的"常见翻车现场"章节
+- 查看 [Prompt 编写技巧](prompt-tips.md) 的“常见翻车现场”章节
 - 实在解决不了，问老师和助教
+
