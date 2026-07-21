@@ -1,0 +1,15 @@
+# Third-party packages from PyPI.
+mlflow
+modelscope
+
+# Locally placed source (you drop these folders in yourself), installed
+# editable so the code in these folders — and any edits — is what actually
+# runs, NOT the PyPI release. Install from the repo root:
+#     pip install -r requirements.txt
+#
+# hydrodataset must be the provided local source (not the PyPI release): the
+# PyPI version lacks the hydrodataset.configs module and pulls an incompatible
+# aqua_fetch, both of which break `import hydrodatasource`.
+-e ./hydrodataset
+-e ./hydrodatasource
+-e ./hydromodel
