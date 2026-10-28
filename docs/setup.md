@@ -60,6 +60,11 @@ pip install -r requirements.txt
 ```bash
 python -c "import hydromodel, hydrodatasource; print('imports OK')"
 
+# 更完整的只读自检（数据路径、脚本、编码、GPU 等；不改系统）：
+python scripts/check_env.py
+# Windows PowerShell 也可用：
+#   powershell -NoProfile -File scripts\check_env.ps1
+
 # 确认装的是仓库里的本地源码，而不是 PyPI 版：
 # Windows:
 pip show hydrodatasource | findstr Location
@@ -67,6 +72,8 @@ pip show hydrodatasource | findstr Location
 # pip show hydrodatasource | grep Location
 ```
 `Location` 应指向仓库里的 `hydrodatasource` 目录。
+
+若 `pip install -r requirements.txt` 报 `editables`、`hatch-vcs` 或写不了 `_version.py`，见 [FAQ](faq.md#q-pip-install--r-requirementstxt-报-editables--hatch-vcs--unknown-version-source-vcs--写不了-_versionpy)。
 
 ## 第三步：数据放置
 
@@ -108,8 +115,12 @@ claude
 
 ## 常见问题
 
+首次运行的完整 FAQ（含 Windows 解释器/工作目录、DeepSeek 环境变量、数据目录双 r 等）见 [faq.md](faq.md)。
+建议先跑 `python scripts/check_env.py`。
+
 ### Q: pip install 报错怎么办？
 A: 把完整的错误信息贴给 AI Agent，让它帮你分析。通常是指定版本冲突或缺少系统依赖。
+若报 `editables` / `hatch-vcs` / `_version.py`，按 [FAQ 安装一节](faq.md#q-pip-install--r-requirementstxt-报-editables--hatch-vcs--unknown-version-source-vcs--写不了-_versionpy) 的三步顺序安装。
 
 ### Q: import 时报 `No module named 'hydrodataset.configs'` 或 `cannot import name 'check_attributes' from 'aqua_fetch.utils'`？
 A: 两个都是**用错了 hydrodataset**——你装的是 PyPI 版，它没有 `hydrodataset.configs`
@@ -120,11 +131,13 @@ python -m pip install -r requirements.txt
 ```
 
 ### Q: 提示 `Configuration file not found: ~/hydro_setting.yml`？
-A: 这只是"没找到 MinIO 配置文件"的提示，不是致命错误，不影响本地数据（`data/`）的使用。
-只有要用 MinIO 远程数据时才需要按上面"第三步 方式一"创建该文件。
+A: 这只是"没找到 MinIO 配置文件"的提示，不是致命错误。本课程用本地 `data/`，
+**不需要**这个文件。不要去配过期的 access_key。
 
 ### Q: Claude Code 连不上？
-A: 检查网络（可能需要科学上网），确认 API Key 有效。
+A: 若走 DeepSeek，按 [claude-code-deepseek.md](claude-code-deepseek.md) 配齐变量，
+确认 `ANTHROPIC_BASE_URL` 以 `/anthropic` 结尾、API Key 有效。其他网络问题再检查代理。
 
 ### Q: 数据连不上？
-A: 确认 `~/hydro_setting.yml` 配置正确，access_key 和 secret 是否过期。
+A: 先确认 `data/songliaorrevent/songliaorrevent/`（两个 r）存在，并且从
+`hydromodel/` 目录运行脚本。本地数据与 `~/hydro_setting.yml` 无关。

@@ -30,7 +30,10 @@ conda activate hydro_homework
 # 4. 从仓库根目录安装依赖（本地源码 editable + PyPI）
 pip install -r requirements.txt
 
-# 5. 启动 AI Agent（首次使用需先安装，见下方安装教程）
+# 5. 环境自检（只读，不改系统；Windows 也可用 scripts/check_env.ps1）
+python scripts/check_env.py
+
+# 6. 启动 AI Agent（首次使用需先安装，见下方安装教程）
 claude   # 或 opencode
 ```
 
@@ -48,12 +51,18 @@ ai_hydro_forecast_homework/
 ├── README.md              # 本文件
 ├── CLAUDE.md              # AI Agent 项目说明（已 gitignore）
 ├── requirements.txt       # Python 依赖
+├── scripts/
+│   ├── check_env.py       # 环境自检（只读；Linux/macOS/Windows）
+│   ├── check_env.ps1      # Windows PowerShell 包装（同样只读）
+│   └── songliao_workflow.py  # doctor / commands 入口（不跑率定）
+├── tests/                 # 自检脚本的 pytest
 ├── .claude/
 │   └── skills/
 │       └── songliao-calibration/   # 内置 skill：率定+评估 songliao
 ├── docs/                  # 教程文档
 │   ├── index.md           # 文档索引
 │   ├── setup.md           # 环境搭建详解
+│   ├── faq.md             # 首次运行常见问题
 │   ├── claude-code-deepseek.md  # 用 DeepSeek 低成本驱动 Claude Code
 │   ├── prompt-tips.md     # Prompt 编写技巧
 │   └── examples.md        # 操作示例
@@ -150,6 +159,38 @@ Claude 会自动改 `hydromodel/configs/songliao_event_3h.yaml` 的参数、跑�
 
 ## 常见问题
 
+更完整的说明、Windows 终端对照和「需要老师确认」的条目见 **[docs/faq.md](docs/faq.md)**。
+环境对不对，先跑只读自检，不要靠猜：
+
+```bash
+python scripts/check_env.py
+# 等价：python scripts/songliao_workflow.py doctor
+```
+
+Windows PowerShell：`powershell -NoProfile -File scripts\check_env.ps1`
+
+**Q: `pip install -r requirements.txt` 报 `editables` / `hatch-vcs` / 写不了 `_version.py`？**
+A: 先升级构建工具再装本地包（必须在仓库根目录、Python ≥ 3.11）：
+
+```bash
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install hatchling hatch-vcs editables
+python -m pip install -r requirements.txt --no-build-isolation
+```
+
+详见 [FAQ · 安装](docs/faq.md#q-pip-install--r-requirementstxt-报-editables--hatch-vcs--unknown-version-source-vcs--写不了-_versionpy)。
+
+**Q: 数据路径验证失败，目录名到底几个 r？**
+A: 正确名字是 **`songliaorrevent`（两个 r）**，放在仓库根目录，内层才是数据根：
+`data/songliaorrevent/songliaorrevent/{attributes,timeseries}`。
+率定脚本要从 `hydromodel/` 目录运行。
+
+**Q: Claude Code 连不上 DeepSeek？**
+A: `ANTHROPIC_BASE_URL` 必须以 `/anthropic` 结尾；需要按 [claude-code-deepseek.md](docs/claude-code-deepseek.md) 配齐变量，不要只设一两个。密钥不要提交到 git。
+
+**Q: Windows 上 Anaconda Prompt 能跑、PyCharm / PowerShell 不能？**
+A: 多半是解释器或工作目录不对。`ModuleNotFoundError: hydroutils` 几乎总是用错了 Python。PyCharm 选 conda 环境 `hydro_homework`，跑 hydromodel 脚本时 Working directory 设为 `hydromodel/`。切目录语法见 [FAQ · Windows](docs/faq.md#windows)。
+
 **Q: AI Agent 生成的代码报错怎么办？**
 A: 把错误信息贴给 AI Agent，让它诊断修复。学会 debug AI 写的代码是重要技能。
 
@@ -157,7 +198,7 @@ A: 把错误信息贴给 AI Agent，让它诊断修复。学会 debug AI 写的�
 A: 可以，任何支持项目级代码交互的 AI 工具都行。推荐 Claude Code。
 
 **Q: 模型率定太慢？**
-A: 先从短时间范围、少参数开始，跑通流程后再扩大。
+A: 先从短时间范围、少参数开始，跑通流程后再扩大。本课程 XAJ + SCE-UA 走 CPU，不需要 GPU。
 
 **Q: 对水文模型完全不了解？**
 A: 直接问 AI："什么是 NSE"、"XAJ 模型有哪些参数"。AI 既是工具也是老师。

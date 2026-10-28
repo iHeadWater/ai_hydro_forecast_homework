@@ -7,6 +7,7 @@
 | 文档 | 内容 |
 |------|------|
 | [环境搭建详解](setup.md) | Python 环境配置、依赖安装、AI Agent 工具安装 |
+| [常见问题 FAQ](faq.md) | 首次运行踩坑：安装、数据路径、Windows、DeepSeek、率定 |
 | [用 DeepSeek 配置 Claude Code](claude-code-deepseek.md) | 免订阅、低成本驱动 Claude Code 的官方配置方案 |
 | [Prompt 编写技巧](prompt-tips.md) | 如何写出高效的 Prompt，让 AI 更懂你的需求 |
 | [操作示例](examples.md) | 从零到率定的完整对话示例 |
@@ -27,6 +28,8 @@
 
 ## 遇到问题？
 
-- 先把错误信息贴给 AI Agent，让它帮你诊断
+- 先跑只读环境自检：`python scripts/check_env.py`（Windows 也可用 `scripts/check_env.ps1`）
+- 对照 [常见问题 FAQ](faq.md)
+- 把错误信息贴给 AI Agent，让它帮你诊断
 - 查看 [Prompt 编写技巧](prompt-tips.md) 的"常见翻车现场"章节
 - 实在解决不了，问老师和助教
